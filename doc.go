@@ -6,6 +6,7 @@ import (
 	"log"
 	"path"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/diamondburned/arikawa/v3/api"
@@ -35,18 +36,23 @@ type interactionData struct {
 	full    bool
 }
 
-var interactionMap = map[string]*interactionData{}
+var (
+	interactionMap = map[string]*interactionData{}
+	mu             sync.Mutex
+)
 
 func init() {
 	go func() {
 		for {
 			time.Sleep(time.Minute * 5)
 			now := time.Now()
+			mu.Lock()
 			for _, data := range interactionMap {
-				if data.created.After(now) {
+				if now.After(data.created.Add(time.Minute * 5)) {
 					delete(interactionMap, data.id)
 				}
 			}
+			mu.Unlock()
 		}
 	}()
 }
@@ -64,16 +70,18 @@ func (b *botState) handleDocs(e *gateway.InteractionCreateEvent) {
 	}
 
 	query := args["query"].String()
-	embed := b.onDocs(e, args["query"].String(), false)
+	embed := b.onDocs(e, query, false)
 	var components *[]discord.Component
 
 	if !strings.HasPrefix(embed.Title, "Error") {
+		mu.Lock()
 		interactionMap[e.ID.String()] = &interactionData{
 			id:      e.ID.String(),
 			created: time.Now(),
 			user:    e.User,
 			query:   query,
 		}
+		mu.Unlock()
 
 		components = &[]discord.Component{
 			discord.ActionRowComponent{
@@ -159,7 +167,9 @@ func (b *botState) onDocsComponent(e *gateway.InteractionCreateEvent, data *inte
 		embed = b.onDocs(e, data.query, data.full)
 		embed.Description = ""
 		embed.Footer = nil
+		mu.Lock()
 		delete(interactionMap, data.id)
+		mu.Unlock()
 	}
 
 	if e.GuildID != discord.NullGuildID {

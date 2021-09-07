@@ -43,13 +43,14 @@ func main() {
 	flag.Parse()
 	update = *updateVar
 
-	if config.Token == "" {
-		log.Fatalln("no token provided")
+	cfg := config()
+	if cfg.Token == "" {
+		log.Fatal("no token provided")
 	}
 
-	s, err := state.New("Bot " + config.Token)
+	s, err := state.New("Bot " + cfg.Token)
 	if err != nil {
-		log.Fatalln("session failed:", err)
+		log.Fatalln(errors.Wrap(err, "could not open session"))
 	}
 
 	searcher := doc.New(http.DefaultClient, godocs.Parser)
