@@ -23,7 +23,7 @@ var (
 	cannotExpand   = "You cannot expand this embed."
 
 	privilegedRoles = map[discord.RoleID]struct{}{
-		// Gopher Herder ID on discord.gg/golang
+		// Gopher Herder ID on discord.gg/golang.
 		370280974593818644: {},
 	}
 )
@@ -146,9 +146,13 @@ func (b *botState) onDocsComponent(e *gateway.InteractionCreateEvent, data *inte
 			},
 		}
 
-	// admin + priviledged only
-	// only check admin here to reduce total api calls
+	// Admin + privileged only.
+	// (Only check admin here to reduce total API calls).
 	case "expand":
+		if !isAdmin() {
+			embed = failEmbed("Error", cannotExpand)
+			break
+		}
 		embed, data.full = b.onDocs(e, data.query, true), true
 		components = &[]discord.Component{
 			discord.ActionRowComponent{
@@ -173,7 +177,7 @@ func (b *botState) onDocsComponent(e *gateway.InteractionCreateEvent, data *inte
 	}
 
 	if e.GuildID != discord.NullGuildID {
-		// check admin last
+		// Check admin last.
 		if e.User.ID != data.user.ID && !hasRole && !isAdmin() {
 			embed = failEmbed("Error", notOwner)
 		}
