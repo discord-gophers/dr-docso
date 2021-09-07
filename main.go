@@ -22,7 +22,7 @@ type botState struct {
 }
 
 func (b *botState) OnCommand(e *gateway.InteractionCreateEvent) {
-	if e.GuildID != discord.NullGuildID {
+	if e.GuildID != 0 {
 		e.User = &e.Member.User
 	}
 

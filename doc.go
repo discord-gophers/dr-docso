@@ -71,19 +71,32 @@ func (b *botState) handleDocs(e *gateway.InteractionCreateEvent) {
 
 	query := args["query"].String()
 	embed := b.onDocs(e, query, false)
-	var components *[]discord.Component
 
-	if !strings.HasPrefix(embed.Title, "Error") {
-		mu.Lock()
-		interactionMap[e.ID.String()] = &interactionData{
-			id:      e.ID.String(),
-			created: time.Now(),
-			user:    e.User,
-			query:   query,
+	if strings.HasPrefix(embed.Title, "Error") {
+		err := b.state.DeleteInteractionResponse(e.AppID, e.Token)
+		if err != nil {
+			log.Println("failed to delete message:", err)
+			return
 		}
-		mu.Unlock()
+		_, _ = b.state.CreateInteractionFollowup(e.AppID, e.Token, api.InteractionResponseData{
+			Flags:  api.EphemeralResponse,
+			Embeds: &[]discord.Embed{embed},
+		})
+		return
+	}
 
-		components = &[]discord.Component{
+	mu.Lock()
+	interactionMap[e.ID.String()] = &interactionData{
+		id:      e.ID.String(),
+		created: time.Now(),
+		user:    e.User,
+		query:   query,
+	}
+	mu.Unlock()
+
+	if _, err := b.state.EditInteractionResponse(e.AppID, e.Token, api.EditInteractionResponseData{
+		Embeds: &[]discord.Embed{embed},
+		Components: &[]discord.Component{
 			discord.ActionRowComponent{
 				Components: []discord.Component{
 					discord.SelectComponent{
@@ -93,15 +106,8 @@ func (b *botState) handleDocs(e *gateway.InteractionCreateEvent) {
 					},
 				},
 			},
-		}
-	}
-
-	edit := api.EditInteractionResponseData{
-		Embeds:     &[]discord.Embed{embed},
-		Components: components,
-	}
-
-	if _, err := b.state.EditInteractionResponse(e.AppID, e.Token, edit); err != nil {
+		},
+	}); err != nil {
 		log.Println("failed to send interaction callback:", err)
 		return
 	}
@@ -111,15 +117,22 @@ func (b *botState) onDocsComponent(e *gateway.InteractionCreateEvent, data *inte
 	var embed discord.Embed
 	var components *[]discord.Component
 
-	var hasRole bool
-	for _, role := range e.Member.RoleIDs {
-		if _, ok := privilegedRoles[role]; ok {
-			hasRole = true
-			break
+	// if e.Member is nil, all operations should be allowed
+	hasRole := e.Member == nil
+	if !hasRole {
+		for _, role := range e.Member.RoleIDs {
+			if _, ok := privilegedRoles[role]; ok {
+				hasRole = true
+				break
+			}
 		}
 	}
 
 	isAdmin := func() bool {
+		if e.Member == nil {
+			return true
+		}
+
 		perms, err := b.state.Permissions(e.ChannelID, e.User.ID)
 		if err != nil {
 			return false
@@ -342,6 +355,9 @@ func parseQuery(module string) (string, []string) {
 	dir, base := path.Split(strings.ToLower(module))
 	split := strings.Split(base, ".")
 	full := dir + split[0]
+	if strings.HasPrefix(full, "x/") {
+		full = "golang.org/" + full
+	}
 
 	if complete, ok := stdlibPackages[full]; ok {
 		full = complete
