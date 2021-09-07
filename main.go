@@ -26,10 +26,13 @@ func (b *botState) OnCommand(e *gateway.InteractionCreateEvent) {
 		e.User = &e.Member.User
 	}
 
-	if e.Data.Name == "docs" {
+	switch e.Data.Name {
+	case "docs":
 		b.handleDocs(e)
-		return
+	case "info":
+		b.handleInfo(e)
 	}
+
 	if data, ok := interactionMap[e.Data.CustomID]; ok {
 		b.onDocsComponent(e, data)
 		return
@@ -125,5 +128,9 @@ var commands = []api.CreateCommandData{
 				Required:    true,
 			},
 		},
+	},
+	{
+		Name:        "info",
+		Description: "Generic bot information",
 	},
 }
