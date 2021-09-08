@@ -13,6 +13,7 @@ import (
 	"github.com/diamondburned/arikawa/v3/discord"
 	"github.com/diamondburned/arikawa/v3/gateway"
 	"github.com/hhhapz/doc"
+	"github.com/pkg/errors"
 )
 
 var (
@@ -31,7 +32,8 @@ var (
 type interactionData struct {
 	id      string
 	created time.Time
-	user    *discord.User
+	token   string
+	userID  discord.UserID
 	query   string
 	full    bool
 }
@@ -41,24 +43,41 @@ var (
 	mu             sync.Mutex
 )
 
-func gcInteractionData() {
+func (b *botState) gcInteractionData() {
+	mapTicker := time.NewTicker(time.Minute * 5)
+	cacheTicker := time.NewTicker(time.Hour * 24)
 	for {
-		time.Sleep(time.Minute * 5)
-		now := time.Now()
-		mu.Lock()
-		for _, data := range interactionMap {
-			if now.After(data.created.Add(time.Minute * 5)) {
+		select {
+
+		// gc interaction tokens
+		case <-mapTicker.C:
+			now := time.Now()
+			mu.Lock()
+			for _, data := range interactionMap {
+				if !now.After(data.created.Add(time.Minute * 5)) {
+					continue
+				}
 				delete(interactionMap, data.id)
+				b.state.EditInteractionResponse(b.appID, data.token, api.EditInteractionResponseData{
+					Components: &[]discord.Component{},
+				})
 			}
+			mu.Unlock()
+
+		case <-cacheTicker.C:
+			b.searcher.WithCache(func(cache map[string]*doc.CachedPackage) {
+				for k := range cache {
+					delete(cache, k)
+				}
+			})
 		}
-		mu.Unlock()
 	}
 }
 
 func (b *botState) handleDocs(e *gateway.InteractionCreateEvent) {
 	data := api.InteractionResponse{Type: api.DeferredMessageInteractionWithSource}
 	if err := b.state.RespondInteraction(e.ID, e.Token, data); err != nil {
-		log.Println("failed to send interaction callback:", err)
+		log.Println(errors.Wrap(err, "could not send interaction callback"))
 		return
 	}
 
@@ -87,7 +106,8 @@ func (b *botState) handleDocs(e *gateway.InteractionCreateEvent) {
 	interactionMap[e.ID.String()] = &interactionData{
 		id:      e.ID.String(),
 		created: time.Now(),
-		user:    e.User,
+		token:   e.Token,
+		userID:  e.User.ID,
 		query:   query,
 	}
 	mu.Unlock()
@@ -106,7 +126,7 @@ func (b *botState) handleDocs(e *gateway.InteractionCreateEvent) {
 			},
 		},
 	}); err != nil {
-		log.Println("failed to send interaction callback:", err)
+		log.Println(errors.Wrap(err, "could not send interaction callback"))
 		return
 	}
 }
@@ -197,7 +217,7 @@ func (b *botState) onDocsComponent(e *gateway.InteractionCreateEvent, data *inte
 
 	if e.GuildID != discord.NullGuildID {
 		// Check admin last.
-		if e.User.ID != data.user.ID && !hasRole && !isAdmin() {
+		if e.User.ID != data.userID && !hasRole && !isAdmin() {
 			embed = failEmbed("Error", notOwner)
 		}
 	}
@@ -220,10 +240,7 @@ func (b *botState) onDocsComponent(e *gateway.InteractionCreateEvent, data *inte
 			},
 		}
 	}
-
-	if err := b.state.RespondInteraction(e.ID, e.Token, resp); err != nil {
-		log.Println("failed to send interaction callback:", err)
-	}
+	b.state.RespondInteraction(e.ID, e.Token, resp)
 }
 
 func (b *botState) onDocs(e *gateway.InteractionCreateEvent, query string, full bool) discord.Embed {
