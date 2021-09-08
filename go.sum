@@ -6,6 +6,8 @@ github.com/diamondburned/arikawa/v3 v3.0.0-20210824182349-f334491deed4 h1:Lj1nG3
 github.com/diamondburned/arikawa/v3 v3.0.0-20210824182349-f334491deed4/go.mod h1:sNqM/iGXuH87wEH1rpQBEY1PR0AAkRKJuUhJGOdo7To=
 github.com/diamondburned/arikawa/v3 v3.0.0-rc.1 h1:1RHtYaVstlEJ5v8b3PNUIpa7D0cfg3qT7n7WbWjb5ZQ=
 github.com/diamondburned/arikawa/v3 v3.0.0-rc.1/go.mod h1:sNqM/iGXuH87wEH1rpQBEY1PR0AAkRKJuUhJGOdo7To=
+github.com/dustin/go-humanize v1.0.0 h1:VSnTsYCnlFHaM2/igO1h6X3HA71jcobQuxemgkq4zYo=
+github.com/dustin/go-humanize v1.0.0/go.mod h1:HtrtbFcZ19U5GC7JDqmcUSB87Iq5E25KnS6fMYU6eOk=
 github.com/gorilla/schema v1.2.0 h1:YufUaxZYCKGFuAq3c96BOhjgd5nmXiOY9NGzF247Tsc=
 github.com/gorilla/schema v1.2.0/go.mod h1:kgLaKoK1FELgZqMAVxx/5cbj0kT+57qxUrAlIO2eleU=
 github.com/gorilla/websocket v1.4.2 h1:+/TMaTYc4QFitKJxsQ7Yye35DkWvkdLcvGKqM+x0Ufc=

@@ -85,6 +85,7 @@ func main() {
 		return
 	}
 
+	go gcInteractionData()
 	select {}
 }
 

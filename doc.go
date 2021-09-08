@@ -41,20 +41,18 @@ var (
 	mu             sync.Mutex
 )
 
-func init() {
-	go func() {
-		for {
-			time.Sleep(time.Minute * 5)
-			now := time.Now()
-			mu.Lock()
-			for _, data := range interactionMap {
-				if now.After(data.created.Add(time.Minute * 5)) {
-					delete(interactionMap, data.id)
-				}
+func gcInteractionData() {
+	for {
+		time.Sleep(time.Minute * 5)
+		now := time.Now()
+		mu.Lock()
+		for _, data := range interactionMap {
+			if now.After(data.created.Add(time.Minute * 5)) {
+				delete(interactionMap, data.id)
 			}
-			mu.Unlock()
 		}
-	}()
+		mu.Unlock()
+	}
 }
 
 func (b *botState) handleDocs(e *gateway.InteractionCreateEvent) {
@@ -161,11 +159,8 @@ func (b *botState) onDocsComponent(e *gateway.InteractionCreateEvent, data *inte
 
 	// Admin + privileged only.
 	// (Only check admin here to reduce total API calls).
+	// If not privileged, send ephemeral instead.
 	case "expand":
-		if !isAdmin() {
-			embed = failEmbed("Error", cannotExpand)
-			break
-		}
 		embed, data.full = b.onDocs(e, data.query, true), true
 		components = &[]discord.Component{
 			discord.ActionRowComponent{
@@ -177,6 +172,17 @@ func (b *botState) onDocsComponent(e *gateway.InteractionCreateEvent, data *inte
 					},
 				},
 			},
+		}
+
+		if !isAdmin() {
+			_ = b.state.RespondInteraction(e.ID, e.Token, api.InteractionResponse{
+				Type: api.MessageInteractionWithSource,
+				Data: &api.InteractionResponseData{
+					Flags:  api.EphemeralResponse,
+					Embeds: &[]discord.Embed{embed},
+				},
+			})
+			break
 		}
 
 	case "hide":
