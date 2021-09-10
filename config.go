@@ -2,11 +2,11 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 
 	"github.com/diamondburned/arikawa/v3/discord"
-	"github.com/pkg/errors"
 )
 
 type configuration struct {
@@ -22,11 +22,11 @@ func config() configuration {
 	var config configuration
 	fileBytes, err := os.ReadFile("config.json")
 	if err != nil {
-		log.Fatal(errors.Wrap(err, "could not open config"))
+		log.Fatal(fmt.Errorf("could not open config, %w", err))
 	}
 	err = json.Unmarshal(fileBytes, &config)
 	if err != nil {
-		log.Fatal(errors.Wrap(err, "could not parse config"))
+		log.Fatal(fmt.Errorf("could not parse config, %w", err))
 	}
 	return config
 }

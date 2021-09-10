@@ -13,7 +13,6 @@ import (
 	"github.com/diamondburned/arikawa/v3/discord"
 	"github.com/diamondburned/arikawa/v3/gateway"
 	"github.com/hhhapz/doc"
-	"github.com/pkg/errors"
 )
 
 var (
@@ -72,7 +71,7 @@ func (b *botState) gcInteractionData() {
 func (b *botState) handleDocs(e *gateway.InteractionCreateEvent, d *discord.CommandInteractionData) {
 	data := api.InteractionResponse{Type: api.DeferredMessageInteractionWithSource}
 	if err := b.state.RespondInteraction(e.ID, e.Token, data); err != nil {
-		log.Println(errors.Wrap(err, "could not send interaction callback"))
+		log.Println(fmt.Errorf("could not send interaction callback, %w", err))
 		return
 	}
 
@@ -121,7 +120,7 @@ func (b *botState) handleDocs(e *gateway.InteractionCreateEvent, d *discord.Comm
 			},
 		},
 	}); err != nil {
-		log.Println(errors.Wrap(err, "could not send interaction callback"))
+		log.Println(fmt.Errorf("could not send interaction callback, %w", err))
 		return
 	}
 }

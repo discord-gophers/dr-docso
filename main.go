@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"log"
 	"net/http"
 
@@ -12,7 +13,6 @@ import (
 	"github.com/diamondburned/arikawa/v3/state"
 	"github.com/hhhapz/doc"
 	"github.com/hhhapz/doc/godocs"
-	"github.com/pkg/errors"
 )
 
 type botState struct {
@@ -58,7 +58,7 @@ func main() {
 
 	s, err := state.New("Bot " + cfg.Token)
 	if err != nil {
-		log.Fatalln(errors.Wrap(err, "could not open session"))
+		log.Fatalln(fmt.Errorf("could not open session, %w", err))
 	}
 
 	searcher := doc.New(http.DefaultClient, godocs.Parser)
@@ -116,7 +116,7 @@ func loadCommands(s *state.State, me discord.UserID, cfg configuration) error {
 		}
 		var err error
 		if _, err = s.CreateCommand(appID, c); err != nil {
-			return errors.Wrap(err, "could not register "+c.Name)
+			return fmt.Errorf("could not register %s, %w", c.Name, err)
 		}
 		log.Println("Created command:", c.Name)
 	}
@@ -134,63 +134,6 @@ var commands = []api.CreateCommandData{
 				Description: "Search query (i.e strings.Split)",
 				Type:        discord.StringOption,
 				Required:    true,
-			},
-		},
-	},
-	{
-		Name:        "go",
-		Description: "Helpful Go Macros",
-		Options: []discord.CommandOption{
-			{
-				Name:        "keyword",
-				Description: "Keyword",
-				Type:        discord.StringOption,
-				Required:    true,
-			},
-		},
-	},
-	{
-		Name:                "modgo",
-		Description:         "Modify Go Macros",
-		NoDefaultPermission: true,
-		Options: []discord.CommandOption{
-			{
-				Name:        "add",
-				Description: "Add a macro",
-				Type:        discord.SubcommandOption,
-				Options: []discord.CommandOption{
-					{
-						Name:        "url",
-						Description: "URL",
-						Type:        discord.StringOption,
-						Required:    true,
-					},
-					{
-						Name:        "keywords",
-						Description: "Keywords (Specify multiple with space)",
-						Type:        discord.StringOption,
-						Required:    true,
-					},
-					{
-						Name:        "title",
-						Description: "Title",
-						Type:        discord.StringOption,
-						Required:    true,
-					},
-				},
-			},
-			{
-				Name:        "rm",
-				Description: "Remove a macro",
-				Type:        discord.SubcommandOption,
-				Options: []discord.CommandOption{
-					{
-						Name:        "url",
-						Description: "URL",
-						Type:        discord.StringOption,
-						Required:    true,
-					},
-				},
 			},
 		},
 	},
