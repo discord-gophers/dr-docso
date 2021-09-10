@@ -16,6 +16,7 @@ import (
 )
 
 type botState struct {
+	cfg      configuration
 	appID    discord.AppID
 	searcher *doc.CachedSearcher
 	state    *state.State
@@ -26,16 +27,20 @@ func (b *botState) OnCommand(e *gateway.InteractionCreateEvent) {
 		e.User = &e.Member.User
 	}
 
-	switch e.Data.Name {
-	case "docs":
-		b.handleDocs(e)
-	case "info":
-		b.handleInfo(e)
-	}
+	switch data := e.Data.(type) {
+	case *discord.CommandInteractionData:
+		switch data.Name {
+		case "docs":
+			b.handleDocs(e, data)
+		case "info":
+			b.handleInfo(e, data)
+		}
 
-	if data, ok := interactionMap[e.Data.CustomID]; ok {
-		b.onDocsComponent(e, data)
-		return
+	case *discord.ComponentInteractionData:
+		if d, ok := interactionMap[data.CustomID]; ok {
+			b.onDocsComponent(e, d)
+			return
+		}
 	}
 }
 
@@ -57,11 +62,12 @@ func main() {
 	}
 
 	searcher := doc.New(http.DefaultClient, godocs.Parser)
-	cs := doc.WithCache(searcher)
 	b := botState{
-		searcher: cs,
+		cfg:      cfg,
+		searcher: doc.WithCache(searcher),
 		state:    s,
 	}
+
 	s.AddHandler(b.OnCommand)
 	s.AddIntents(gateway.IntentGuildMessageReactions)
 
@@ -80,7 +86,7 @@ func main() {
 
 	log.Println("Logged in as ", me.Tag())
 
-	if err := loadCommands(s, me.ID); err != nil {
+	if err := loadCommands(s, me.ID, cfg); err != nil {
 		log.Println("Could not load commands:", err)
 		return
 	}
@@ -89,7 +95,7 @@ func main() {
 	select {}
 }
 
-func loadCommands(s *state.State, me discord.UserID) error {
+func loadCommands(s *state.State, me discord.UserID, cfg configuration) error {
 	appID := discord.AppID(me)
 	registered, err := s.Commands(appID)
 	if err != nil {
@@ -108,7 +114,8 @@ func loadCommands(s *state.State, me discord.UserID) error {
 		if registeredMap[c.Name] {
 			continue
 		}
-		if _, err := s.CreateCommand(appID, c); err != nil {
+		var err error
+		if _, err = s.CreateCommand(appID, c); err != nil {
 			return errors.Wrap(err, "could not register "+c.Name)
 		}
 		log.Println("Created command:", c.Name)
@@ -120,18 +127,75 @@ func loadCommands(s *state.State, me discord.UserID) error {
 var commands = []api.CreateCommandData{
 	{
 		Name:        "docs",
-		Description: "Base command",
+		Description: "Search Go Package Docs",
 		Options: []discord.CommandOption{
 			{
 				Name:        "query",
-				Description: "Search query",
+				Description: "Search query (i.e strings.Split)",
 				Type:        discord.StringOption,
 				Required:    true,
 			},
 		},
 	},
 	{
+		Name:        "go",
+		Description: "Helpful Go Macros",
+		Options: []discord.CommandOption{
+			{
+				Name:        "keyword",
+				Description: "Keyword",
+				Type:        discord.StringOption,
+				Required:    true,
+			},
+		},
+	},
+	{
+		Name:                "modgo",
+		Description:         "Modify Go Macros",
+		NoDefaultPermission: true,
+		Options: []discord.CommandOption{
+			{
+				Name:        "add",
+				Description: "Add a macro",
+				Type:        discord.SubcommandOption,
+				Options: []discord.CommandOption{
+					{
+						Name:        "url",
+						Description: "URL",
+						Type:        discord.StringOption,
+						Required:    true,
+					},
+					{
+						Name:        "keywords",
+						Description: "Keywords (Specify multiple with space)",
+						Type:        discord.StringOption,
+						Required:    true,
+					},
+					{
+						Name:        "title",
+						Description: "Title",
+						Type:        discord.StringOption,
+						Required:    true,
+					},
+				},
+			},
+			{
+				Name:        "rm",
+				Description: "Remove a macro",
+				Type:        discord.SubcommandOption,
+				Options: []discord.CommandOption{
+					{
+						Name:        "url",
+						Description: "URL",
+						Type:        discord.StringOption,
+						Required:    true,
+					},
+				},
+			},
+		},
+	},
+	{
 		Name:        "info",
-		Description: "Generic bot information",
+		Description: "Generic Bot Info",
 	},
 }

@@ -5,16 +5,21 @@ import (
 	"log"
 	"os"
 
+	"github.com/diamondburned/arikawa/v3/discord"
 	"github.com/pkg/errors"
 )
 
-type Configuration struct {
-	Prefix string `json:"prefix"`
-	Token  string `json:"token"`
+type configuration struct {
+	Token       string             `json:"token"`
+	Permissions commandPermissions `json:"permissions"`
 }
 
-func config() Configuration {
-	var config Configuration
+type commandPermissions struct {
+	Docs map[discord.RoleID]bool `json:"docs"`
+}
+
+func config() configuration {
+	var config configuration
 	fileBytes, err := os.ReadFile("config.json")
 	if err != nil {
 		log.Fatal(errors.Wrap(err, "could not open config"))

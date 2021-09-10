@@ -22,11 +22,6 @@ var (
 	methodNotFound = "Could not find method `%s` for type `%s` in package `%s`"
 	notOwner       = "Only the message sender can do this."
 	cannotExpand   = "You cannot expand this embed."
-
-	privilegedRoles = map[discord.RoleID]struct{}{
-		// Gopher Herder ID on discord.gg/golang.
-		370280974593818644: {},
-	}
 )
 
 type interactionData struct {
@@ -74,15 +69,15 @@ func (b *botState) gcInteractionData() {
 	}
 }
 
-func (b *botState) handleDocs(e *gateway.InteractionCreateEvent) {
+func (b *botState) handleDocs(e *gateway.InteractionCreateEvent, d *discord.CommandInteractionData) {
 	data := api.InteractionResponse{Type: api.DeferredMessageInteractionWithSource}
 	if err := b.state.RespondInteraction(e.ID, e.Token, data); err != nil {
 		log.Println(errors.Wrap(err, "could not send interaction callback"))
 		return
 	}
 
-	args := map[string]gateway.InteractionOption{}
-	for _, arg := range e.Data.Options {
+	args := map[string]discord.InteractionOption{}
+	for _, arg := range d.Options {
 		args[arg.Name] = arg
 	}
 
@@ -115,9 +110,9 @@ func (b *botState) handleDocs(e *gateway.InteractionCreateEvent) {
 	if _, err := b.state.EditInteractionResponse(e.AppID, e.Token, api.EditInteractionResponseData{
 		Embeds: &[]discord.Embed{embed},
 		Components: &[]discord.Component{
-			discord.ActionRowComponent{
+			&discord.ActionRowComponent{
 				Components: []discord.Component{
-					discord.SelectComponent{
+					&discord.SelectComponent{
 						CustomID:    e.ID.String(),
 						Options:     selectOptions(false),
 						Placeholder: "Actions",
@@ -139,15 +134,15 @@ func (b *botState) onDocsComponent(e *gateway.InteractionCreateEvent, data *inte
 	hasRole := e.Member == nil
 	if !hasRole {
 		for _, role := range e.Member.RoleIDs {
-			if _, ok := privilegedRoles[role]; ok {
+			if _, ok := b.cfg.Permissions.Docs[role]; ok {
 				hasRole = true
 				break
 			}
 		}
 	}
 
-	isAdmin := func() bool {
-		if e.Member == nil {
+	hasPerm := func() bool {
+		if hasRole {
 			return true
 		}
 
@@ -161,14 +156,14 @@ func (b *botState) onDocsComponent(e *gateway.InteractionCreateEvent, data *inte
 		return true
 	}
 
-	action := e.Data.Values[0]
+	action := e.Data.(*discord.ComponentInteractionData).Values[0]
 	switch action {
 	case "minimize":
 		embed, data.full = b.onDocs(e, data.query, false), false
 		components = &[]discord.Component{
-			discord.ActionRowComponent{
+			&discord.ActionRowComponent{
 				Components: []discord.Component{
-					discord.SelectComponent{
+					&discord.SelectComponent{
 						CustomID:    data.id,
 						Options:     selectOptions(false),
 						Placeholder: "Actions",
@@ -177,15 +172,15 @@ func (b *botState) onDocsComponent(e *gateway.InteractionCreateEvent, data *inte
 			},
 		}
 
-	// Admin + privileged only.
+	// Admin or privileged only.
 	// (Only check admin here to reduce total API calls).
 	// If not privileged, send ephemeral instead.
 	case "expand":
 		embed, data.full = b.onDocs(e, data.query, true), true
 		components = &[]discord.Component{
-			discord.ActionRowComponent{
+			&discord.ActionRowComponent{
 				Components: []discord.Component{
-					discord.SelectComponent{
+					&discord.SelectComponent{
 						CustomID:    data.id,
 						Options:     selectOptions(true),
 						Placeholder: "Actions",
@@ -194,7 +189,7 @@ func (b *botState) onDocsComponent(e *gateway.InteractionCreateEvent, data *inte
 			},
 		}
 
-		if !isAdmin() {
+		if !hasPerm() {
 			_ = b.state.RespondInteraction(e.ID, e.Token, api.InteractionResponse{
 				Type: api.MessageInteractionWithSource,
 				Data: &api.InteractionResponseData{
@@ -217,7 +212,7 @@ func (b *botState) onDocsComponent(e *gateway.InteractionCreateEvent, data *inte
 
 	if e.GuildID != discord.NullGuildID {
 		// Check admin last.
-		if e.User.ID != data.userID && !hasRole && !isAdmin() {
+		if e.User.ID != data.userID && !hasPerm() {
 			embed = failEmbed("Error", notOwner)
 		}
 	}
@@ -413,7 +408,12 @@ func format(c doc.Comment, initial int, full bool) string {
 	if len(c) == 0 {
 		return "*No documentation found*"
 	}
+
 	if !full {
+		if md := c.Markdown(); len(md) < 500 {
+			return md
+		}
+
 		md := c[0].Markdown()
 		if len(md) > 500 {
 			md = md[:400] + "...\n\n*More documentation omitted*"

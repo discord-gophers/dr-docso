@@ -14,7 +14,7 @@ import (
 
 var started = time.Now().Unix()
 
-func (b *botState) handleInfo(e *gateway.InteractionCreateEvent) {
+func (b *botState) handleInfo(e *gateway.InteractionCreateEvent, _ *discord.CommandInteractionData) {
 	stats := runtime.MemStats{}
 	runtime.ReadMemStats(&stats)
 

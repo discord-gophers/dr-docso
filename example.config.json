@@ -1,0 +1,8 @@
+{
+	"token": "--",
+	"permissions": {
+		"docs": {
+			"role id (global expand + close others)": true,
+		}
+	}
+}
