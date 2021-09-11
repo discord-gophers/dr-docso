@@ -18,10 +18,10 @@ The bot is created to be used in the [Discord Gophers](https://discord.gg/golang
 
 ```discord
 /docs query:fmt
-/docs query:fmt.Errorf 
-/docs query:fmt Errorf 
+/docs query:fmt.Errorf
+/docs query:fmt Errorf
 /docs query:github.com/hhhapz/doc.package
-/docs query:github.com/hhhapz/doc searcher search 
+/docs query:github.com/hhhapz/doc searcher search
 /docs query:http
 /docs query:net/http
 ```

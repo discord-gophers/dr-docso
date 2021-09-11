@@ -16,9 +16,9 @@ import (
 )
 
 var (
-	searchErr      = "Could not find package with the name of `%s`."
-	notFound       = "Could not find type or function `%s` in package `%s`"
-	methodNotFound = "Could not find method `%s` for type `%s` in package `%s`"
+	searchErr      = "Could not find package with the name of `%s`.\n\nTry /docs query:? for examples."
+	notFound       = "Could not find type or function `%s` in package `%s`.\n\nTry /docs query:? for examples."
+	methodNotFound = "Could not find method `%s` for type `%s` in package `%s`.\n\nTRry /docs query:? for examples."
 	notOwner       = "Only the message sender can do this."
 	cannotExpand   = "You cannot expand this embed."
 )
@@ -71,7 +71,7 @@ func (b *botState) gcInteractionData() {
 func (b *botState) handleDocs(e *gateway.InteractionCreateEvent, d *discord.CommandInteractionData) {
 	data := api.InteractionResponse{Type: api.DeferredMessageInteractionWithSource}
 	if err := b.state.RespondInteraction(e.ID, e.Token, data); err != nil {
-		log.Println(fmt.Errorf("could not send interaction callback, %w", err))
+		log.Println(fmt.Errorf("could not send interaction callback, %v", err))
 		return
 	}
 
@@ -81,12 +81,15 @@ func (b *botState) handleDocs(e *gateway.InteractionCreateEvent, d *discord.Comm
 	}
 
 	query := args["query"].String()
-	embed := b.onDocs(e, query, false)
-
+	embed := b.docs(e, query, false)
 	if strings.HasPrefix(embed.Title, "Error") {
+		if query == "?" || query == "help" || query == "usage" {
+			embed = helpEmbed()
+		}
+
 		err := b.state.DeleteInteractionResponse(e.AppID, e.Token)
 		if err != nil {
-			log.Println("failed to delete message:", err)
+			log.Printf("failed to delete message: %v", err)
 			return
 		}
 		_, _ = b.state.CreateInteractionFollowup(e.AppID, e.Token, api.InteractionResponseData{
@@ -120,7 +123,7 @@ func (b *botState) handleDocs(e *gateway.InteractionCreateEvent, d *discord.Comm
 			},
 		},
 	}); err != nil {
-		log.Println(fmt.Errorf("could not send interaction callback, %w", err))
+		log.Printf("could not send interaction callback, %v", err)
 		return
 	}
 }
@@ -158,7 +161,7 @@ func (b *botState) onDocsComponent(e *gateway.InteractionCreateEvent, data *inte
 	action := e.Data.(*discord.ComponentInteractionData).Values[0]
 	switch action {
 	case "minimize":
-		embed, data.full = b.onDocs(e, data.query, false), false
+		embed, data.full = b.docs(e, data.query, false), false
 		components = &[]discord.Component{
 			&discord.ActionRowComponent{
 				Components: []discord.Component{
@@ -175,7 +178,7 @@ func (b *botState) onDocsComponent(e *gateway.InteractionCreateEvent, data *inte
 	// (Only check admin here to reduce total API calls).
 	// If not privileged, send ephemeral instead.
 	case "expand":
-		embed, data.full = b.onDocs(e, data.query, true), true
+		embed, data.full = b.docs(e, data.query, true), true
 		components = &[]discord.Component{
 			&discord.ActionRowComponent{
 				Components: []discord.Component{
@@ -201,7 +204,7 @@ func (b *botState) onDocsComponent(e *gateway.InteractionCreateEvent, data *inte
 
 	case "hide":
 		components = &[]discord.Component{}
-		embed = b.onDocs(e, data.query, data.full)
+		embed = b.docs(e, data.query, data.full)
 		embed.Description = ""
 		embed.Footer = nil
 		mu.Lock()
@@ -237,11 +240,11 @@ func (b *botState) onDocsComponent(e *gateway.InteractionCreateEvent, data *inte
 	b.state.RespondInteraction(e.ID, e.Token, resp)
 }
 
-func (b *botState) onDocs(e *gateway.InteractionCreateEvent, query string, full bool) discord.Embed {
+func (b *botState) docs(e *gateway.InteractionCreateEvent, query string, full bool) discord.Embed {
 	module, parts := parseQuery(query)
 	pkg, err := b.searcher.Search(context.Background(), module)
 	if err != nil {
-		log.Printf("Package request by %s failed: %v", e.User.Tag(), err)
+		log.Printf("Package request by %s(%q) failed: %v", e.User.Tag(), query, err)
 		return failEmbed("Error", fmt.Sprintf(searchErr, module))
 	}
 
@@ -364,6 +367,26 @@ func failEmbed(title, description string) discord.Embed {
 		Title:       title,
 		Description: description,
 		Color:       0xEE0000,
+	}
+}
+
+func helpEmbed() discord.Embed {
+	return discord.Embed{
+		Title: "Docs help",
+		Description: `Discodocs is a bot to query Go documentation.
+The parsing is done using [hhhapz/doc](https://github.com/hhhapz/doc).
+
+Here are some example queries:` + "```" + `
+/docs query:fmt
+/docs query:fmt.Errorf
+/docs query:fmt Errorf
+/docs query:github.com/hhhapz/doc.package
+/docs query:github.com/hhhapz/doc searcher search
+/docs query:http
+/docs query:net/http
+` + "```",
+		Footer: &discord.EmbedFooter{Text: "https://github.com/hhhapz/discodoc"},
+		Color:  accentColor,
 	}
 }
 
