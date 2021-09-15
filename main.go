@@ -11,6 +11,7 @@ import (
 	"github.com/diamondburned/arikawa/v3/discord"
 	"github.com/diamondburned/arikawa/v3/gateway"
 	"github.com/diamondburned/arikawa/v3/state"
+	"github.com/hhhapz/discodoc/blog"
 	"github.com/hhhapz/doc"
 	"github.com/hhhapz/doc/godocs"
 )
@@ -20,6 +21,8 @@ type botState struct {
 	appID    discord.AppID
 	searcher *doc.CachedSearcher
 	state    *state.State
+
+	articles []blog.Article
 }
 
 func (b *botState) OnCommand(e *gateway.InteractionCreateEvent) {
@@ -30,6 +33,8 @@ func (b *botState) OnCommand(e *gateway.InteractionCreateEvent) {
 	switch data := e.Data.(type) {
 	case *discord.CommandInteractionData:
 		switch data.Name {
+		case "blog":
+			b.handleBlog(e, data)
 		case "docs":
 			b.handleDocs(e, data)
 		case "info":
@@ -92,6 +97,7 @@ func main() {
 	}
 
 	go b.gcInteractionData()
+	go b.updateArticles()
 	select {}
 }
 
@@ -125,6 +131,18 @@ func loadCommands(s *state.State, me discord.UserID, cfg configuration) error {
 }
 
 var commands = []api.CreateCommandData{
+	// {
+	// 	Name:        "blog",
+	// 	Description: "Search go.dev Blog Posts",
+	// 	Options: []discord.CommandOption{
+	// 		{
+	// 			Name:        "query",
+	// 			Description: "Search query",
+	// 			Type:        discord.StringOption,
+	// 			Required:    true,
+	// 		},
+	// 	},
+	// },
 	{
 		Name:        "docs",
 		Description: "Search Go Package Docs",

@@ -16,9 +16,9 @@ import (
 )
 
 var (
-	searchErr      = "Could not find package with the name of `%s`.\n\nTry /docs query:? for examples."
-	notFound       = "Could not find type or function `%s` in package `%s`.\n\nTry /docs query:? for examples."
-	methodNotFound = "Could not find method `%s` for type `%s` in package `%s`.\n\nTRry /docs query:? for examples."
+	searchErr      = "Could not find package with the name of `%s`.\n\nTry `/docs query:?` for examples."
+	notFound       = "Could not find type or function `%s` in package `%s`.\n\nTry `/docs query:?` for examples."
+	methodNotFound = "Could not find method `%s` for type `%s` in package `%s`.\n\nTRry `/docs query:?` f`or examples."
 	notOwner       = "Only the message sender can do this."
 	cannotExpand   = "You cannot expand this embed."
 )
@@ -75,12 +75,11 @@ func (b *botState) handleDocs(e *gateway.InteractionCreateEvent, d *discord.Comm
 		return
 	}
 
-	args := map[string]discord.InteractionOption{}
-	for _, arg := range d.Options {
-		args[arg.Name] = arg
-	}
+	// only arg and required, always present
+	query := d.Options[0].String()
 
-	query := args["query"].String()
+	log.Printf("%s used docs(%q)", e.User.Tag(), query)
+
 	embed := b.docs(e, query, false)
 	if strings.HasPrefix(embed.Title, "Error") {
 		if query == "?" || query == "help" || query == "usage" {
@@ -159,6 +158,9 @@ func (b *botState) onDocsComponent(e *gateway.InteractionCreateEvent, data *inte
 	}
 
 	action := e.Data.(*discord.ComponentInteractionData).Values[0]
+
+	log.Printf("%s used docs component(%q)", e.User.Tag(), action)
+
 	switch action {
 	case "minimize":
 		embed, data.full = b.docs(e, data.query, false), false
@@ -248,90 +250,34 @@ func (b *botState) docs(e *gateway.InteractionCreateEvent, query string, full bo
 		return failEmbed("Error", fmt.Sprintf(searchErr, module))
 	}
 
+	notFound := failEmbed("Error: Not Found", fmt.Sprintf(notFound, parts[0], module))
 	switch len(parts) {
 	case 0:
-		return b.fullPackage(pkg, full)
+		return pkgEmbed(pkg, full)
+
 	case 1:
 		if typ, ok := pkg.Types[parts[0]]; ok {
-			return b.typ(pkg, typ, full)
+			return typEmbed(pkg, typ, full)
 		}
 
 		if fn, ok := pkg.Functions[parts[0]]; ok {
-			return b.fn(pkg, fn, full)
+			return fnEmbed(pkg, fn, full)
 		}
 
-		return failEmbed("Error: Not Found", fmt.Sprintf(notFound, parts[0], module))
+		return notFound
+
 	default:
 		typ, ok := pkg.Types[parts[0]]
 		if !ok {
-			return failEmbed("Error: Not Found", fmt.Sprintf(notFound, parts[0], module))
+			return notFound
 		}
 
 		method, ok := typ.Methods[parts[1]]
 		if !ok {
-			return failEmbed("Error: Not Found", fmt.Sprintf(methodNotFound, parts[1], parts[0], module))
+			return notFound
 		}
 
-		return b.method(pkg, method, full)
-	}
-}
-
-const (
-	docLimit = 2800
-	defLimit = 1000
-
-	accentColor = 0x007D9C
-)
-
-func (b *botState) fullPackage(pkg doc.Package, full bool) discord.Embed {
-	return discord.Embed{
-		Title: "Package " + pkg.URL,
-		URL:   "https://pkg.go.dev/" + pkg.URL,
-		Description: fmt.Sprintf("**Types:** %d\n**Functions:** %d\n\n%s",
-			len(pkg.Types), len(pkg.Functions), format(pkg.Overview, 32, full)),
-		Color: accentColor,
-		Footer: &discord.EmbedFooter{
-			Text: "https://pkg.go.dev/" + pkg.URL,
-		},
-	}
-}
-
-func (b *botState) typ(pkg doc.Package, typ doc.Type, full bool) discord.Embed {
-	def := typdef(typ.Signature, full)
-	return discord.Embed{
-		Title:       fmt.Sprintf("%s: %s", pkg.URL, typ.Name),
-		URL:         fmt.Sprintf("https://pkg.go.dev/%s#%s", pkg.URL, typ.Name),
-		Description: fmt.Sprintf("```go\n%s\n```\n%s", def, format(typ.Comment, len(def), full)),
-		Color:       accentColor,
-		Footer: &discord.EmbedFooter{
-			Text: "https://pkg.go.dev/" + pkg.URL,
-		},
-	}
-}
-
-func (b *botState) fn(pkg doc.Package, fn doc.Function, full bool) discord.Embed {
-	def := typdef(fn.Signature, full)
-	return discord.Embed{
-		Title:       fmt.Sprintf("%s: %s", pkg.URL, fn.Name),
-		URL:         fmt.Sprintf("https://pkg.go.dev/%s#%s", pkg.URL, fn.Name),
-		Description: fmt.Sprintf("```go\n%s\n```\n%s", def, format(fn.Comment, len(def), full)),
-		Color:       accentColor,
-		Footer: &discord.EmbedFooter{
-			Text: "https://pkg.go.dev/" + pkg.URL,
-		},
-	}
-}
-
-func (b *botState) method(pkg doc.Package, method doc.Method, full bool) discord.Embed {
-	def := typdef(method.Signature, full)
-	return discord.Embed{
-		Title:       fmt.Sprintf("%s: %s.%s", pkg.URL, method.For, method.Name),
-		URL:         fmt.Sprintf("https://pkg.go.dev/%s#%s.%s", pkg.URL, method.For, method.Name),
-		Description: fmt.Sprintf("```go\n%s\n```\n%s", def, format(method.Comment, len(def), full)),
-		Color:       accentColor,
-		Footer: &discord.EmbedFooter{
-			Text: "https://pkg.go.dev/" + pkg.URL,
-		},
+		return methodEmbed(pkg, method, full)
 	}
 }
 
@@ -359,14 +305,6 @@ func selectOptions(full bool) []discord.SelectComponentOption {
 			Description: "Hide the message.",
 			Emoji:       &discord.ButtonEmoji{Name: "❌"},
 		},
-	}
-}
-
-func failEmbed(title, description string) discord.Embed {
-	return discord.Embed{
-		Title:       title,
-		Description: description,
-		Color:       0xEE0000,
 	}
 }
 
@@ -492,6 +430,8 @@ var stdlibPackages = map[string]string{
 	"tls":      "crypto/tls",
 	"x509":     "crypto/x509",
 	"pkix":     "crypto/x509/pkix",
+
+	"sql": "database/sql",
 
 	"dwarf":    "debug/dwarf",
 	"elf":      "debug/elf",
