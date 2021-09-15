@@ -250,7 +250,6 @@ func (b *botState) docs(e *gateway.InteractionCreateEvent, query string, full bo
 		return failEmbed("Error", fmt.Sprintf(searchErr, module))
 	}
 
-	notFound := failEmbed("Error: Not Found", fmt.Sprintf(notFound, parts[0], module))
 	switch len(parts) {
 	case 0:
 		return pkgEmbed(pkg, full)
@@ -259,22 +258,20 @@ func (b *botState) docs(e *gateway.InteractionCreateEvent, query string, full bo
 		if typ, ok := pkg.Types[parts[0]]; ok {
 			return typEmbed(pkg, typ, full)
 		}
-
 		if fn, ok := pkg.Functions[parts[0]]; ok {
 			return fnEmbed(pkg, fn, full)
 		}
-
-		return notFound
+		return failEmbed("Error: Not Found", fmt.Sprintf(notFound, parts[0], module))
 
 	default:
 		typ, ok := pkg.Types[parts[0]]
 		if !ok {
-			return notFound
+			return failEmbed("Error: Not Found", fmt.Sprintf(notFound, parts[0], module))
 		}
 
 		method, ok := typ.Methods[parts[1]]
 		if !ok {
-			return notFound
+			return failEmbed("Error: Not Found", fmt.Sprintf(notFound, parts[1], module))
 		}
 
 		return methodEmbed(pkg, method, full)
