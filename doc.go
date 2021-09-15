@@ -80,7 +80,7 @@ func (b *botState) handleDocs(e *gateway.InteractionCreateEvent, d *discord.Comm
 
 	log.Printf("%s used docs(%q)", e.User.Tag(), query)
 
-	embed := b.docs(e, query, false)
+	embed, more := b.docs(e, query, false)
 	if strings.HasPrefix(embed.Title, "Error") {
 		if query == "?" || query == "help" || query == "usage" {
 			embed = helpEmbed()
@@ -91,6 +91,8 @@ func (b *botState) handleDocs(e *gateway.InteractionCreateEvent, d *discord.Comm
 			log.Printf("failed to delete message: %v", err)
 			return
 		}
+
+		// Discord's API means this will always error out, but its still valid.
 		_, _ = b.state.CreateInteractionFollowup(e.AppID, e.Token, api.InteractionResponseData{
 			Flags:  api.EphemeralResponse,
 			Embeds: &[]discord.Embed{embed},
@@ -108,17 +110,19 @@ func (b *botState) handleDocs(e *gateway.InteractionCreateEvent, d *discord.Comm
 	}
 	mu.Unlock()
 
+	// If more is true, there is more content that was omitted in the embed.
+	// If more is false, there is no more content, and the expand option
+	// becomes redundant.
+	var component discord.Component = selectComponent(e.ID.String(), false)
+	if !more {
+		component = buttonComponent(e.ID.String())
+	}
+
 	if _, err := b.state.EditInteractionResponse(e.AppID, e.Token, api.EditInteractionResponseData{
 		Embeds: &[]discord.Embed{embed},
 		Components: &[]discord.Component{
 			&discord.ActionRowComponent{
-				Components: []discord.Component{
-					&discord.SelectComponent{
-						CustomID:    e.ID.String(),
-						Options:     selectOptions(false),
-						Placeholder: "Actions",
-					},
-				},
+				Components: []discord.Component{component},
 			},
 		},
 	}); err != nil {
@@ -157,22 +161,22 @@ func (b *botState) onDocsComponent(e *gateway.InteractionCreateEvent, data *inte
 		return true
 	}
 
-	action := e.Data.(*discord.ComponentInteractionData).Values[0]
+	cid := e.Data.(*discord.ComponentInteractionData)
+
+	action := "hide"
+	if len(cid.Values) != 0 {
+		action = cid.Values[0]
+	}
 
 	log.Printf("%s used docs component(%q)", e.User.Tag(), action)
 
 	switch action {
 	case "minimize":
-		embed, data.full = b.docs(e, data.query, false), false
+		embed, _ = b.docs(e, data.query, false)
+		data.full = false
 		components = &[]discord.Component{
 			&discord.ActionRowComponent{
-				Components: []discord.Component{
-					&discord.SelectComponent{
-						CustomID:    data.id,
-						Options:     selectOptions(false),
-						Placeholder: "Actions",
-					},
-				},
+				Components: []discord.Component{selectComponent(data.id, false)},
 			},
 		}
 
@@ -180,16 +184,11 @@ func (b *botState) onDocsComponent(e *gateway.InteractionCreateEvent, data *inte
 	// (Only check admin here to reduce total API calls).
 	// If not privileged, send ephemeral instead.
 	case "expand":
-		embed, data.full = b.docs(e, data.query, true), true
+		embed, _ = b.docs(e, data.query, true)
+		data.full = true
 		components = &[]discord.Component{
 			&discord.ActionRowComponent{
-				Components: []discord.Component{
-					&discord.SelectComponent{
-						CustomID:    data.id,
-						Options:     selectOptions(true),
-						Placeholder: "Actions",
-					},
-				},
+				Components: []discord.Component{selectComponent(data.id, true)},
 			},
 		}
 
@@ -206,9 +205,10 @@ func (b *botState) onDocsComponent(e *gateway.InteractionCreateEvent, data *inte
 
 	case "hide":
 		components = &[]discord.Component{}
-		embed = b.docs(e, data.query, data.full)
+		embed, _ = b.docs(e, data.query, data.full)
 		embed.Description = ""
 		embed.Footer = nil
+
 		mu.Lock()
 		delete(interactionMap, data.id)
 		mu.Unlock()
@@ -217,7 +217,7 @@ func (b *botState) onDocsComponent(e *gateway.InteractionCreateEvent, data *inte
 	if e.GuildID != discord.NullGuildID {
 		// Check admin last.
 		if e.User.ID != data.userID && !hasPerm() {
-			embed = failEmbed("Error", notOwner)
+			embed, _ = failEmbed("Error", notOwner)
 		}
 	}
 
@@ -242,7 +242,7 @@ func (b *botState) onDocsComponent(e *gateway.InteractionCreateEvent, data *inte
 	b.state.RespondInteraction(e.ID, e.Token, resp)
 }
 
-func (b *botState) docs(e *gateway.InteractionCreateEvent, query string, full bool) discord.Embed {
+func (b *botState) docs(e *gateway.InteractionCreateEvent, query string, full bool) (discord.Embed, bool) {
 	module, parts := parseQuery(query)
 	pkg, err := b.searcher.Search(context.Background(), module)
 	if err != nil {
@@ -278,7 +278,7 @@ func (b *botState) docs(e *gateway.InteractionCreateEvent, query string, full bo
 	}
 }
 
-func selectOptions(full bool) []discord.SelectComponentOption {
+func selectComponent(id string, full bool) *discord.SelectComponent {
 	expand := discord.SelectComponentOption{
 		Label:       "Expand",
 		Value:       "expand",
@@ -294,14 +294,27 @@ func selectOptions(full bool) []discord.SelectComponentOption {
 		}
 	}
 
-	return []discord.SelectComponentOption{
-		expand,
-		{
-			Label:       "Hide",
-			Value:       "hide",
-			Description: "Hide the message.",
-			Emoji:       &discord.ButtonEmoji{Name: "❌"},
+	return &discord.SelectComponent{
+		CustomID:    id,
+		Placeholder: "Actions",
+		Options: []discord.SelectComponentOption{
+			expand,
+			{
+				Label:       "Hide",
+				Value:       "hide",
+				Description: "Hide the message.",
+				Emoji:       &discord.ButtonEmoji{Name: "❌"},
+			},
 		},
+	}
+}
+
+func buttonComponent(id string) *discord.ButtonComponent {
+	return &discord.ButtonComponent{
+		CustomID: id,
+		Label:    "Hide",
+		Emoji:    &discord.ButtonEmoji{Name: "🇽"},
+		Style:    discord.SecondaryButton,
 	}
 }
 
@@ -326,73 +339,27 @@ Here are some example queries:` + "```" + `
 }
 
 func parseQuery(module string) (string, []string) {
-	module = strings.ReplaceAll(module, " ", ".")
-	dir, base := path.Split(strings.ToLower(module))
-	split := strings.Split(base, ".")
-	full := dir + split[0]
-	if strings.HasPrefix(full, "x/") {
-		full = "golang.org/" + full
+	var split []string
+	var first string
+
+	if strings.Contains(module, "@") {
+		split = strings.Split(module, " ")
+		first = split[0]
+	} else {
+		module = strings.ReplaceAll(module, " ", ".")
+		dir, base := path.Split(strings.ToLower(module))
+		split = strings.Split(base, ".")
+		first = dir + split[0]
 	}
 
-	if complete, ok := stdlibPackages[full]; ok {
-		full = complete
+	if strings.HasPrefix(first, "x/") {
+		first = "golang.org/" + first
 	}
-	return full, split[1:]
-}
-
-func typdef(def string, full bool) string {
-	split := strings.Split(def, "\n")
-	if !full {
-		return split[0]
+	if complete, ok := stdlibPackages[first]; ok {
+		first = complete
 	}
 
-	b := strings.Builder{}
-	b.Grow(len(def))
-
-	for _, line := range strings.Split(def, "\n") {
-		b.WriteRune('\n')
-
-		if len(line)+b.Len() > defLimit {
-			b.WriteString("// full signature omitted")
-			break
-		}
-		b.WriteString(line)
-	}
-	return b.String()
-}
-
-func format(c doc.Comment, initial int, full bool) string {
-	if len(c) == 0 {
-		return "*No documentation found*"
-	}
-
-	if !full {
-		if md := c.Markdown(); len(md) < 500 {
-			return md
-		}
-
-		md := c[0].Markdown()
-		if len(md) > 500 {
-			md = md[:400] + "...\n\n*More documentation omitted*"
-		}
-		if len(c) == 1 {
-			return md
-		}
-		return fmt.Sprintf("%s\n\n*More documentation omitted*", md)
-	}
-
-	var parts doc.Comment
-	length := initial
-	for _, note := range c {
-		l := len(note.Text())
-		if l+length > docLimit {
-			parts = append(parts, doc.Paragraph("*More documentation omitted...*"))
-			break
-		}
-		length += l
-		parts = append(parts, note)
-	}
-	return parts.Markdown()
+	return first, split[1:]
 }
 
 var stdlibPackages = map[string]string{

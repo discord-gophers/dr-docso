@@ -41,11 +41,12 @@ func (b *botState) handleBlog(e *gateway.InteractionCreateEvent, d *discord.Comm
 	log.Printf("%s used blog(%q)", e.User.Tag(), query)
 
 	if len(query) < 3 || len(query) > 20 {
+		embed, _ := failEmbed("Error", "Your query must be between 3 and 20 characters.")
 		b.state.RespondInteraction(e.ID, e.Token, api.InteractionResponse{
 			Type: api.MessageInteractionWithSource,
 			Data: &api.InteractionResponseData{
 				Flags:  api.EphemeralResponse,
-				Embeds: &[]discord.Embed{failEmbed("Error", "Your query must be between 3 and 20 characters.")},
+				Embeds: &[]discord.Embed{embed},
 			},
 		})
 		return
