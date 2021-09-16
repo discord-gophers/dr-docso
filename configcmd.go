@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"strings"
 
 	"github.com/diamondburned/arikawa/v3/api"
@@ -14,10 +15,14 @@ func (b *botState) handleConfig(e *gateway.InteractionCreateEvent, d *discord.Co
 
 	var embed discord.Embed
 
+	grp := d.Options[0]
+	cmd := grp.Options[0]
+	log.Printf("%s used config %s %s", e.User.Tag(), grp.Name, cmd.Name)
+
 block:
-	switch grp := d.Options[0]; grp.Name {
+	switch grp.Name {
 	case "user":
-		switch cmd := grp.Options[0]; cmd.Name {
+		switch cmd.Name {
 		case "ignore":
 			user, _ := cmd.Options[0].Snowflake()
 
@@ -55,7 +60,7 @@ block:
 		}
 
 	case "alias":
-		switch cmd := grp.Options[0]; cmd.Name {
+		switch cmd.Name {
 		case "add":
 			alias := cmd.Options[0].String()
 			keyword := cmd.Options[1].String()
@@ -90,13 +95,16 @@ block:
 		}
 	}
 
-	b.state.RespondInteraction(e.ID, e.Token, api.InteractionResponse{
+	if err := b.state.RespondInteraction(e.ID, e.Token, api.InteractionResponse{
 		Type: api.MessageInteractionWithSource,
 		Data: &api.InteractionResponseData{
 			Flags:  api.EphemeralResponse,
 			Embeds: &[]discord.Embed{embed},
 		},
-	})
+	}); err != nil {
+		log.Printf("could not send interaction callback, %v", err)
+		return
+	}
 }
 
 func (b *botState) canIgnore(guild discord.GuildID, user discord.Snowflake) bool {
