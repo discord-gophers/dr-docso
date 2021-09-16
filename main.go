@@ -11,6 +11,7 @@ import (
 	"github.com/diamondburned/arikawa/v3/discord"
 	"github.com/diamondburned/arikawa/v3/gateway"
 	"github.com/diamondburned/arikawa/v3/state"
+	"github.com/diamondburned/arikawa/v3/utils/httputil"
 	"github.com/hhhapz/discodoc/blog"
 	"github.com/hhhapz/doc"
 	"github.com/hhhapz/doc/godocs"
@@ -30,6 +31,11 @@ func (b *botState) OnCommand(e *gateway.InteractionCreateEvent) {
 		e.User = &e.Member.User
 	}
 
+	// ignore blacklisted users
+	if _, ok := b.cfg.Blacklist[discord.Snowflake(e.User.ID)]; ok {
+		return
+	}
+
 	switch data := e.Data.(type) {
 	case *discord.CommandInteractionData:
 		switch data.Name {
@@ -39,6 +45,8 @@ func (b *botState) OnCommand(e *gateway.InteractionCreateEvent) {
 			b.handleDocs(e, data)
 		case "info":
 			b.handleInfo(e, data)
+		case "config":
+			b.handleConfig(e, data)
 		}
 
 	case *discord.ComponentInteractionData:
@@ -89,12 +97,12 @@ func main() {
 	}
 	b.appID = discord.AppID(me.ID)
 
-	log.Println("Logged in as ", me.Tag())
-
 	if err := loadCommands(s, me.ID, cfg); err != nil {
 		log.Println("Could not load commands:", err)
 		return
 	}
+
+	log.Println("Logged in as ", me.Tag())
 
 	go b.gcInteractionData()
 	go b.updateArticles()
@@ -120,10 +128,32 @@ func loadCommands(s *state.State, me discord.UserID, cfg configuration) error {
 		if registeredMap[c.Name] {
 			continue
 		}
+		var cmd *discord.Command
 		var err error
-		if _, err = s.CreateCommand(appID, c); err != nil {
-			return fmt.Errorf("could not register %s, %w", c.Name, err)
+		if cmd, err = s.CreateCommand(appID, c); err != nil {
+			fmt.Println(string(err.(*httputil.HTTPError).Body))
+			return fmt.Errorf("Could not register: %s, %w", c.Name, err)
 		}
+
+		switch c.Name {
+		case "config":
+			for guildID, opts := range cfg.Permissions.Config {
+				var perms []discord.CommandPermissions
+				for role := range opts {
+					perms = append(perms, discord.CommandPermissions{
+						ID:         role,
+						Type:       discord.RoleCommandPermission,
+						Permission: true,
+					})
+				}
+				_, err := s.EditCommandPermissions(appID, guildID, cmd.ID, perms)
+				if err != nil {
+					fmt.Println(string(err.(*httputil.HTTPError).Message))
+					return err
+				}
+			}
+		}
+
 		log.Println("Created command:", c.Name)
 	}
 
@@ -158,5 +188,89 @@ var commands = []api.CreateCommandData{
 	{
 		Name:        "info",
 		Description: "Generic Bot Info",
+	},
+	{
+		Name:                "config",
+		Description:         "Configure Discodoc",
+		NoDefaultPermission: true,
+		Options: []discord.CommandOption{
+			{
+				Type:        discord.SubcommandGroupOption,
+				Name:        "user",
+				Description: "Manage user access to discodoc",
+				Options: []discord.CommandOption{
+					{
+						Type:        discord.SubcommandOption,
+						Name:        "ignore",
+						Description: "Ignore commands and actions from a user",
+						Options: []discord.CommandOption{
+							{
+								Type:        discord.UserOption,
+								Name:        "user",
+								Description: "User to ignore",
+								Required:    true,
+							},
+						},
+					},
+					{
+						Type:        discord.SubcommandOption,
+						Name:        "unignore",
+						Description: "Stop ignoring commands and actions from a user",
+						Options: []discord.CommandOption{
+							{
+								Type:        discord.UserOption,
+								Name:        "user",
+								Description: "User to unignore",
+								Required:    true,
+							},
+						},
+					},
+				},
+			},
+			{
+				Type:        discord.SubcommandGroupOption,
+				Name:        "alias",
+				Description: "Configure /docs aliases",
+				Options: []discord.CommandOption{
+					{
+						Type:        discord.SubcommandOption,
+						Name:        "add",
+						Description: "Add an alias",
+						Options: []discord.CommandOption{
+							{
+								Type:        discord.StringOption,
+								Name:        "alias",
+								Description: "Alias name",
+								Required:    true,
+							},
+							{
+								Type:        discord.StringOption,
+								Name:        "url",
+								Description: "Full module name",
+								Required:    true,
+							},
+						},
+					},
+					{
+						Type:        discord.SubcommandOption,
+						Name:        "remove",
+						Description: "Remove an alias",
+						Options: []discord.CommandOption{
+							{
+								Type:        discord.StringOption,
+								Name:        "alias",
+								Description: "Alias name",
+								Required:    true,
+							},
+						},
+					},
+					{
+						Type:        discord.SubcommandOption,
+						Name:        "list",
+						Description: "List all aliases",
+					},
+				},
+			},
+		},
 	},
 }

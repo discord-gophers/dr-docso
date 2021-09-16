@@ -82,8 +82,11 @@ func (b *botState) handleDocs(e *gateway.InteractionCreateEvent, d *discord.Comm
 
 	embed, more := b.docs(e, query, false)
 	if strings.HasPrefix(embed.Title, "Error") {
-		if query == "?" || query == "help" || query == "usage" {
+		switch query {
+		case "?", "help", "usage":
 			embed = helpEmbed()
+		case "list", "aliases":
+			embed = aliasList(b.cfg.Aliases)
 		}
 
 		err := b.state.DeleteInteractionResponse(e.AppID, e.Token)
@@ -217,7 +220,7 @@ func (b *botState) onDocsComponent(e *gateway.InteractionCreateEvent, data *inte
 	if e.GuildID != discord.NullGuildID {
 		// Check admin last.
 		if e.User.ID != data.userID && !hasPerm() {
-			embed, _ = failEmbed("Error", notOwner)
+			embed = failEmbed("Error", notOwner)
 		}
 	}
 
@@ -244,10 +247,15 @@ func (b *botState) onDocsComponent(e *gateway.InteractionCreateEvent, data *inte
 
 func (b *botState) docs(e *gateway.InteractionCreateEvent, query string, full bool) (discord.Embed, bool) {
 	module, parts := parseQuery(query)
-	pkg, err := b.searcher.Search(context.Background(), module)
+	split := strings.Split(module, "/")
+	if full, ok := b.cfg.Aliases[split[0]]; ok {
+		split[0] = full
+	}
+
+	pkg, err := b.searcher.Search(context.Background(), strings.Join(split, "/"))
 	if err != nil {
 		log.Printf("Package request by %s(%q) failed: %v", e.User.Tag(), query, err)
-		return failEmbed("Error", fmt.Sprintf(searchErr, module))
+		return failEmbed("Error", fmt.Sprintf(searchErr, module)), false
 	}
 
 	switch len(parts) {
@@ -261,17 +269,17 @@ func (b *botState) docs(e *gateway.InteractionCreateEvent, query string, full bo
 		if fn, ok := pkg.Functions[parts[0]]; ok {
 			return fnEmbed(pkg, fn, full)
 		}
-		return failEmbed("Error: Not Found", fmt.Sprintf(notFound, parts[0], module))
+		return failEmbed("Error: Not Found", fmt.Sprintf(notFound, parts[0], module)), false
 
 	default:
 		typ, ok := pkg.Types[parts[0]]
 		if !ok {
-			return failEmbed("Error: Not Found", fmt.Sprintf(notFound, parts[0], module))
+			return failEmbed("Error: Not Found", fmt.Sprintf(notFound, parts[0], module)), false
 		}
 
 		method, ok := typ.Methods[parts[1]]
 		if !ok {
-			return failEmbed("Error: Not Found", fmt.Sprintf(notFound, parts[1], module))
+			return failEmbed("Error: Not Found", fmt.Sprintf(notFound, parts[1], module)), false
 		}
 
 		return methodEmbed(pkg, method, full)
@@ -315,26 +323,6 @@ func buttonComponent(id string) *discord.ButtonComponent {
 		Label:    "Hide",
 		Emoji:    &discord.ButtonEmoji{Name: "🇽"},
 		Style:    discord.SecondaryButton,
-	}
-}
-
-func helpEmbed() discord.Embed {
-	return discord.Embed{
-		Title: "Docs help",
-		Description: `Discodocs is a bot to query Go documentation.
-The parsing is done using [hhhapz/doc](https://github.com/hhhapz/doc).
-
-Here are some example queries:` + "```" + `
-/docs query:fmt
-/docs query:fmt.Errorf
-/docs query:fmt Errorf
-/docs query:github.com/hhhapz/doc.package
-/docs query:github.com/hhhapz/doc searcher search
-/docs query:http
-/docs query:net/http
-` + "```",
-		Footer: &discord.EmbedFooter{Text: "https://github.com/hhhapz/discodoc"},
-		Color:  accentColor,
 	}
 }
 

@@ -2,7 +2,12 @@
 	"token": "--",
 	"permissions": {
 		"docs": {
-			"role id (global expand + close others)": true,
+			"role id (global expand + close others)": {}
+		},
+		"config": {
+			"guild id": {
+				"role id (configure discodoc)": {}
+			}
 		}
 	}
 }
