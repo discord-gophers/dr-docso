@@ -70,7 +70,7 @@ Here are some example queries:` + "```md" + `
 /docs help
 
 # List aliases
-/docs list
+/docs alias
 
 # Search a module
 /docs query:fmt

@@ -85,7 +85,7 @@ func (b *botState) handleDocs(e *gateway.InteractionCreateEvent, d *discord.Comm
 		switch query {
 		case "?", "help", "usage":
 			embed = helpEmbed()
-		case "list", "aliases":
+		case "alias", "aliases":
 			embed = aliasList(b.cfg.Aliases)
 		}
 
