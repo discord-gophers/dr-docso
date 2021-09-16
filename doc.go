@@ -80,15 +80,18 @@ func (b *botState) handleDocs(e *gateway.InteractionCreateEvent, d *discord.Comm
 
 	log.Printf("%s used docs(%q)", e.User.Tag(), query)
 
-	embed, more := b.docs(e, query, false)
-	if strings.HasPrefix(embed.Title, "Error") {
-		switch query {
-		case "?", "help", "usage":
-			embed = helpEmbed()
-		case "alias", "aliases":
-			embed = aliasList(b.cfg.Aliases)
-		}
+	var embed discord.Embed
+	var internal, more bool
+	switch query {
+	case "/", "help", "usage":
+		embed, internal = helpEmbed(), true
+	case "alias", "aliases":
+		embed, internal = aliasList(b.cfg.Aliases), true
+	default:
+		embed, more = b.docs(e, query, false)
+	}
 
+	if internal || strings.HasPrefix(embed.Title, "Error") {
 		err := b.state.DeleteInteractionResponse(e.AppID, e.Token)
 		if err != nil {
 			log.Printf("failed to delete message: %v", err)
