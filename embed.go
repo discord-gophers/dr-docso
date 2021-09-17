@@ -84,7 +84,7 @@ Here are some example queries:` + "```md" + `
 # Many standard library types have aliases
 /docs query:http (-> net/http)
 ` + "```",
-		Footer: &discord.EmbedFooter{Text: "Source Code: https://github.com/DiscordGophers/dr-docso/tree/rewrite"},
+		Footer: &discord.EmbedFooter{Text: "Source Code: https://github.com/DiscordGophers/dr-docso"},
 		Color:  accentColor,
 	}
 }
