@@ -16,9 +16,9 @@ import (
 )
 
 var (
-	searchErr      = "Could not find package with the name of `%s`.\n\nTry `/docs query:?` for examples."
-	notFound       = "Could not find type or function `%s` in package `%s`.\n\nTry `/docs query:?` for examples."
-	methodNotFound = "Could not find method `%s` for type `%s` in package `%s`.\n\nTRry `/docs query:?` f`or examples."
+	searchErr      = "Could not find package with the name of `%s`.\n\nTry `/docs query:help` for examples."
+	notFound       = "Could not find type or function `%s` in package `%s`.\n\nTry `/docs query:help` for examples."
+	methodNotFound = "Could not find method `%s` for type `%s` in package `%s`.\n\nTRry `/docs query:help` f`or examples."
 	notOwner       = "Only the message sender can do this."
 	cannotExpand   = "You cannot expand this embed."
 )
@@ -83,7 +83,7 @@ func (b *botState) handleDocs(e *gateway.InteractionCreateEvent, d *discord.Comm
 	var embed discord.Embed
 	var internal, more bool
 	switch query {
-	case "/", "help", "usage":
+	case "?", "help", "usage":
 		embed, internal = helpEmbed(), true
 	case "alias", "aliases":
 		embed, internal = aliasList(b.cfg.Aliases), true
