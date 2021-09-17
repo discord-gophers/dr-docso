@@ -36,7 +36,7 @@ block:
 			b.cfg.Blacklist[user] = struct{}{}
 			embed = discord.Embed{
 				Title:       "Success",
-				Description: fmt.Sprintf("<@!%s> is now going to be ignored from all commands on discodoc.", user),
+				Description: fmt.Sprintf("<@!%s> is now going to be ignored from all commands on Dr-Docso.", user),
 				Color:       accentColor,
 			}
 

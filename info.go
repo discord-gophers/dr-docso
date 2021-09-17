@@ -26,7 +26,7 @@ func (b *botState) handleInfo(e *gateway.InteractionCreateEvent, _ *discord.Comm
 	fmt.Fprintf(buf, "Go: %s\n", runtime.Version())
 	fmt.Fprintf(buf, "Uptime: <t:%d:R>\n", started)
 	fmt.Fprintf(buf, "Memory: %s / %s (alloc / sys)\n", humanize.Bytes(stats.Alloc), humanize.Bytes(stats.Sys))
-	fmt.Fprintf(buf, "Source: %s\n", "[link](https://gitea.teamortix.com/hamza/discodoc)")
+	fmt.Fprintf(buf, "Source: %s\n", "[link](https://github.com/DiscordGophers/dr-docso/tree/rewrite)")
 	fmt.Fprintf(buf, "Concurrent Tasks: %s\n", humanize.Comma(int64(runtime.NumGoroutine())))
 
 	b.state.RespondInteraction(e.ID, e.Token, api.InteractionResponse{
@@ -34,7 +34,7 @@ func (b *botState) handleInfo(e *gateway.InteractionCreateEvent, _ *discord.Comm
 		Data: &api.InteractionResponseData{
 			Flags: api.EphemeralResponse,
 			Embeds: &[]discord.Embed{{
-				Title:       "DiscoDocs",
+				Title:       "Dr-Docso",
 				Description: buf.String(),
 				Color:       accentColor,
 			}},

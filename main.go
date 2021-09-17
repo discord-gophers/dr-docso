@@ -7,12 +7,12 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/DiscordGophers/dr-docso/blog"
 	"github.com/diamondburned/arikawa/v3/api"
 	"github.com/diamondburned/arikawa/v3/discord"
 	"github.com/diamondburned/arikawa/v3/gateway"
 	"github.com/diamondburned/arikawa/v3/state"
 	"github.com/diamondburned/arikawa/v3/utils/httputil"
-	"github.com/hhhapz/discodoc/blog"
 	"github.com/hhhapz/doc"
 	"github.com/hhhapz/doc/godocs"
 )
@@ -197,13 +197,13 @@ var commands = []api.CreateCommandData{
 	},
 	{
 		Name:                "config",
-		Description:         "Configure Discodoc",
+		Description:         "Configure Dr-Docso",
 		NoDefaultPermission: true,
 		Options: []discord.CommandOption{
 			{
 				Type:        discord.SubcommandGroupOption,
 				Name:        "user",
-				Description: "Manage user access to discodoc",
+				Description: "Manage user access to Dr-Docso",
 				Options: []discord.CommandOption{
 					{
 						Type:        discord.SubcommandOption,

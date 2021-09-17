@@ -62,7 +62,7 @@ func methodEmbed(pkg doc.Package, method doc.Method, full bool) (discord.Embed, 
 func helpEmbed() discord.Embed {
 	return discord.Embed{
 		Title: "Docs help",
-		Description: `Discodocs is a bot to query Go documentation.
+		Description: `Dr-Docso is a bot to query Go documentation.
 The parsing is done using [hhhapz/doc](https://github.com/hhhapz/doc).
 
 Here are some example queries:` + "```md" + `
@@ -84,7 +84,7 @@ Here are some example queries:` + "```md" + `
 # Many standard library types have aliases
 /docs query:http (-> net/http)
 ` + "```",
-		Footer: &discord.EmbedFooter{Text: "Source Code: https://github.com/hhhapz/discodoc"},
+		Footer: &discord.EmbedFooter{Text: "Source Code: https://github.com/DiscordGophers/dr-docso/tree/rewrite"},
 		Color:  accentColor,
 	}
 }

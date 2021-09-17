@@ -1,11 +1,11 @@
-# Discodoc
+# Dr-Docso
 
 A Go documentation bot for Discord, written with
 [hhhapz/doc](https://github.com/hhhapz/doc).
 
 ---
 
-Discodoc is written in Go, and uses slash commands to query Go documentation
+Dr-Docso is written in Go, and uses slash commands to query Go documentation
 with a single command (`/docs query:strings.split`).
 
 The bot will display minimal content, and allow users to view expanded

@@ -6,10 +6,10 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/DiscordGophers/dr-docso/blog"
 	"github.com/diamondburned/arikawa/v3/api"
 	"github.com/diamondburned/arikawa/v3/discord"
 	"github.com/diamondburned/arikawa/v3/gateway"
-	"github.com/hhhapz/discodoc/blog"
 )
 
 func (b *botState) updateArticles() {
