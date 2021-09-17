@@ -10,6 +10,7 @@ import (
 )
 
 type configuration struct {
+	Prefix      string             `json:"prefix"`
 	Token       string             `json:"token"`
 	Permissions commandPermissions `json:"permissions"`
 

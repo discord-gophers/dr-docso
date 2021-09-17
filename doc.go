@@ -24,12 +24,13 @@ var (
 )
 
 type interactionData struct {
-	id      string
-	created time.Time
-	token   string
-	userID  discord.UserID
-	query   string
-	full    bool
+	id        string
+	created   time.Time
+	token     string
+	userID    discord.UserID
+	messageID discord.MessageID
+	query     string
+	full      bool
 }
 
 var (
@@ -46,17 +47,23 @@ func (b *botState) gcInteractionData() {
 		// gc interaction tokens
 		case <-mapTicker.C:
 			now := time.Now()
-			mu.Lock()
 			for _, data := range interactionMap {
 				if !now.After(data.created.Add(time.Minute * 5)) {
 					continue
 				}
+
+				mu.Lock()
 				delete(interactionMap, data.id)
+				mu.Unlock()
+
+				if data.token == "" {
+					continue
+				}
+
 				b.state.EditInteractionResponse(b.appID, data.token, api.EditInteractionResponseData{
 					Components: &[]discord.Component{},
 				})
 			}
-			mu.Unlock()
 
 		case <-cacheTicker.C:
 			b.searcher.WithCache(func(cache map[string]*doc.CachedPackage) {
@@ -88,7 +95,7 @@ func (b *botState) handleDocs(e *gateway.InteractionCreateEvent, d *discord.Comm
 	case "alias", "aliases":
 		embed, internal = aliasList(b.cfg.Aliases), true
 	default:
-		embed, more = b.docs(e, query, false)
+		embed, more = b.docs(*e.User, query, false)
 	}
 
 	if internal || strings.HasPrefix(embed.Title, "Error") {
@@ -137,7 +144,68 @@ func (b *botState) handleDocs(e *gateway.InteractionCreateEvent, d *discord.Comm
 	}
 }
 
-func (b *botState) onDocsComponent(e *gateway.InteractionCreateEvent, data *interactionData) {
+func (b *botState) handleDocsText(m *gateway.MessageCreateEvent, query string) {
+	log.Printf("%s used docs(%q) text version", m.Author.Tag(), query)
+
+	var embed discord.Embed
+	var internal, more bool
+	switch query {
+	case "?", "help", "usage":
+		embed, internal = helpEmbed(), true
+	case "alias", "aliases":
+		embed, internal = aliasList(b.cfg.Aliases), true
+	default:
+		embed, more = b.docs(m.Author, query, false)
+	}
+
+	if internal {
+		b.state.SendEmbedReply(m.ChannelID, m.ID, embed)
+		return
+	}
+
+	if strings.HasPrefix(embed.Title, "Error") {
+		b.state.React(m.ChannelID, m.ID, "😕")
+		return
+	}
+
+	data, ok := interactionMap[m.ID.String()]
+	if ok {
+		b.state.EditEmbeds(m.ChannelID, data.messageID, embed)
+		return
+	}
+
+	mu.Lock()
+	interactionMap[m.ID.String()] = &interactionData{
+		id:      m.ID.String(),
+		created: time.Now(),
+		userID:  m.Author.ID,
+		query:   query,
+	}
+	mu.Unlock()
+
+	var component discord.Component = selectComponent(m.ID.String(), false)
+	if !more {
+		component = buttonComponent(m.ID.String())
+	}
+
+	msg, err := b.state.SendMessageComplex(m.ChannelID, api.SendMessageData{
+		Components: []discord.Component{
+			&discord.ActionRowComponent{
+				Components: []discord.Component{component},
+			},
+		},
+		Embeds: []discord.Embed{embed},
+	})
+	if err != nil {
+		delete(interactionMap, m.ID.String())
+		return
+	}
+	mu.Lock()
+	interactionMap[m.ID.String()].messageID = msg.ID
+	mu.Unlock()
+}
+
+func (b *botState) handleDocsComponent(e *gateway.InteractionCreateEvent, data *interactionData) {
 	var embed discord.Embed
 	var components *[]discord.Component
 
@@ -178,7 +246,7 @@ func (b *botState) onDocsComponent(e *gateway.InteractionCreateEvent, data *inte
 
 	switch action {
 	case "minimize":
-		embed, _ = b.docs(e, data.query, false)
+		embed, _ = b.docs(*e.User, data.query, false)
 		data.full = false
 		components = &[]discord.Component{
 			&discord.ActionRowComponent{
@@ -190,7 +258,7 @@ func (b *botState) onDocsComponent(e *gateway.InteractionCreateEvent, data *inte
 	// (Only check admin here to reduce total API calls).
 	// If not privileged, send ephemeral instead.
 	case "expand":
-		embed, _ = b.docs(e, data.query, true)
+		embed, _ = b.docs(*e.User, data.query, true)
 		data.full = true
 		components = &[]discord.Component{
 			&discord.ActionRowComponent{
@@ -211,7 +279,7 @@ func (b *botState) onDocsComponent(e *gateway.InteractionCreateEvent, data *inte
 
 	case "hide":
 		components = &[]discord.Component{}
-		embed, _ = b.docs(e, data.query, data.full)
+		embed, _ = b.docs(*e.User, data.query, data.full)
 		embed.Description = ""
 		embed.Footer = nil
 
@@ -248,7 +316,7 @@ func (b *botState) onDocsComponent(e *gateway.InteractionCreateEvent, data *inte
 	b.state.RespondInteraction(e.ID, e.Token, resp)
 }
 
-func (b *botState) docs(e *gateway.InteractionCreateEvent, query string, full bool) (discord.Embed, bool) {
+func (b *botState) docs(user discord.User, query string, full bool) (discord.Embed, bool) {
 	module, parts := parseQuery(query)
 	split := strings.Split(module, "/")
 	if full, ok := b.cfg.Aliases[split[0]]; ok {
@@ -257,7 +325,7 @@ func (b *botState) docs(e *gateway.InteractionCreateEvent, query string, full bo
 
 	pkg, err := b.searcher.Search(context.Background(), strings.Join(split, "/"))
 	if err != nil {
-		log.Printf("Package request by %s(%q) failed: %v", e.User.Tag(), query, err)
+		log.Printf("Package request by %s(%q) failed: %v", user.Tag(), query, err)
 		return failEmbed("Error", fmt.Sprintf(searchErr, module)), false
 	}
 
