@@ -33,6 +33,7 @@ func (b *botState) OnCommand(e *gateway.InteractionCreateEvent) {
 
 	// ignore blacklisted users
 	if _, ok := b.cfg.Blacklist[discord.Snowflake(e.User.ID)]; ok {
+		log.Printf("Ignoring message from %s", e.User.Tag())
 		return
 	}
 
@@ -161,18 +162,23 @@ func loadCommands(s *state.State, me discord.UserID, cfg configuration) error {
 }
 
 var commands = []api.CreateCommandData{
-	// {
-	// 	Name:        "blog",
-	// 	Description: "Search go.dev Blog Posts",
-	// 	Options: []discord.CommandOption{
-	// 		{
-	// 			Name:        "query",
-	// 			Description: "Search query",
-	// 			Type:        discord.StringOption,
-	// 			Required:    true,
-	// 		},
-	// 	},
-	// },
+	{
+		Name:        "blog",
+		Description: "Search go.dev Blog Posts",
+		Options: []discord.CommandOption{
+			{
+				Name:        "query",
+				Description: "Search query",
+				Type:        discord.StringOption,
+				Required:    true,
+			},
+			{
+				Name:        "match-desc",
+				Description: "Match on blog description as well as title",
+				Type:        discord.BooleanOption,
+			},
+		},
+	},
 	{
 		Name:        "docs",
 		Description: "Search Go Package Docs",
@@ -224,6 +230,11 @@ var commands = []api.CreateCommandData{
 								Required:    true,
 							},
 						},
+					},
+					{
+						Type:        discord.SubcommandOption,
+						Name:        "ignorelist",
+						Description: "List all ignored users",
 					},
 				},
 			},

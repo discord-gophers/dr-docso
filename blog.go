@@ -38,7 +38,12 @@ func (b *botState) handleBlog(e *gateway.InteractionCreateEvent, d *discord.Comm
 	// only arg and required, always present
 	query := d.Options[0].String()
 
-	log.Printf("%s used blog(%q)", e.User.Tag(), query)
+	var matchDesc bool
+	if len(d.Options) > 1 {
+		matchDesc, _ = d.Options[0].Bool()
+	}
+
+	log.Printf("%s used blog(%q, %t)", e.User.Tag(), query, matchDesc)
 
 	if len(query) < 3 || len(query) > 20 {
 		embed := failEmbed("Error", "Your query must be between 3 and 20 characters.")
@@ -52,22 +57,42 @@ func (b *botState) handleBlog(e *gateway.InteractionCreateEvent, d *discord.Comm
 		return
 	}
 
-	var matched []blog.Article
+	var fromTitle, fromDesc []blog.Article
+	var total int
+
 	for _, a := range b.articles {
-		if a.Match(query) {
-			matched = append(matched, a)
-			if len(matched) == 5 {
+		if ok, typ := a.Match(query); ok {
+			switch {
+			case typ == blog.MatchTitle:
+				fromTitle = append(fromTitle, a)
+			case typ == blog.MatchDesc && matchDesc:
+				fromDesc = append(fromDesc, a)
+			default:
+				continue
+			}
+
+			total++
+			if total == 5 {
 				break
 			}
 		}
 	}
 
-	embed := discord.Embed{
-		Title:       fmt.Sprintf("Blog: %d Results", len(matched)),
-		Description: fmt.Sprintf("Search Term: %q", query),
+	if total == 0 {
+		embed := failEmbed("Error", fmt.Sprintf("No results found for %q", query))
+		b.state.RespondInteraction(e.ID, e.Token, api.InteractionResponse{
+			Type: api.MessageInteractionWithSource,
+			Data: &api.InteractionResponseData{
+				Flags:  api.EphemeralResponse,
+				Embeds: &[]discord.Embed{embed},
+			},
+		})
 	}
-	for _, match := range matched {
-		embed.Fields = append(embed.Fields, discord.EmbedField{
+
+	var fields []discord.EmbedField
+
+	for _, match := range append(fromTitle, fromDesc...) {
+		fields = append(fields, discord.EmbedField{
 			Name:  fmt.Sprintf("%s, %s", match.Title, match.Date),
 			Value: fmt.Sprintf("*%s*\n%s\n%s", match.Authors, match.Summary, match.URL),
 		})
@@ -76,7 +101,14 @@ func (b *botState) handleBlog(e *gateway.InteractionCreateEvent, d *discord.Comm
 	b.state.RespondInteraction(e.ID, e.Token, api.InteractionResponse{
 		Type: api.MessageInteractionWithSource,
 		Data: &api.InteractionResponseData{
-			Embeds: &[]discord.Embed{embed},
+			Embeds: &[]discord.Embed{
+				{
+					Title:       fmt.Sprintf("Blog: %d Results", total),
+					Description: fmt.Sprintf("Search Term: %q\nMatch on description: %t", query, matchDesc),
+					Fields:      fields,
+					Color:       accentColor,
+				},
+			},
 		},
 	})
 }

@@ -107,6 +107,24 @@ func aliasList(aliases map[string]string) discord.Embed {
 	}
 }
 
+func ignoreList(blacklist map[discord.Snowflake]struct{}) discord.Embed {
+	keys := make([]string, 0, len(blacklist))
+	for k := range blacklist {
+		keys = append(keys, fmt.Sprintf("- <@!%s>", k))
+	}
+
+	desc := "*No ignores set*"
+	if len(keys) > 0 {
+		desc = strings.Join(keys, "\n")
+	}
+
+	return discord.Embed{
+		Title:       "Ignored Users",
+		Description: desc,
+		Color:       accentColor,
+	}
+}
+
 func failEmbed(title, description string) discord.Embed {
 	return discord.Embed{
 		Title:       title,

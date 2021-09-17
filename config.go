@@ -13,7 +13,8 @@ type configuration struct {
 	Token       string             `json:"token"`
 	Permissions commandPermissions `json:"permissions"`
 
-	Aliases   map[string]string              `json:"aliases"`
+	Aliases map[string]string `json:"aliases"`
+
 	Blacklist map[discord.Snowflake]struct{} `json:"blacklist"`
 }
 

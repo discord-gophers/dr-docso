@@ -16,7 +16,7 @@ import (
 var started = time.Now().Unix()
 
 func (b *botState) handleInfo(e *gateway.InteractionCreateEvent, _ *discord.CommandInteractionData) {
-	log.Printf("%s used docs info", e.User.Tag())
+	log.Printf("%s used info", e.User.Tag())
 
 	stats := runtime.MemStats{}
 	runtime.ReadMemStats(&stats)

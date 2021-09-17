@@ -11,14 +11,11 @@ import (
 )
 
 func (b *botState) handleConfig(e *gateway.InteractionCreateEvent, d *discord.CommandInteractionData) {
-	// only arg and required, always present
-
-	var embed discord.Embed
-
 	grp := d.Options[0]
 	cmd := grp.Options[0]
 	log.Printf("%s used config %s %s", e.User.Tag(), grp.Name, cmd.Name)
 
+	var embed discord.Embed
 block:
 	switch grp.Name {
 	case "user":
@@ -57,6 +54,9 @@ block:
 				Description: fmt.Sprintf("<@!%s> is now unignored.", user),
 				Color:       accentColor,
 			}
+
+		case "ignorelist":
+			embed = ignoreList(b.cfg.Blacklist)
 		}
 
 	case "alias":
@@ -88,6 +88,7 @@ block:
 			embed = aliasList(b.cfg.Aliases)
 		}
 	}
+
 	if !strings.HasPrefix(embed.Title, "Error") {
 		err := saveConfig(b.cfg)
 		if err != nil {
