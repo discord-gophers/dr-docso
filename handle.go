@@ -41,6 +41,8 @@ func (b *botState) OnCommand(e *gateway.InteractionCreateEvent) {
 			b.handleBlog(e, data)
 		case "docs":
 			b.handleDocs(e, data)
+		case "spec":
+			b.handleSpec(e, data)
 		case "info":
 			b.handleInfo(e, data)
 		case "config":
@@ -62,6 +64,11 @@ func (b *botState) OnMessage(m *gateway.MessageCreateEvent) {
 
 	c := m.Content
 	if !strings.HasPrefix(c, b.cfg.Prefix) {
+		return
+	}
+
+	if _, ok := b.cfg.Blacklist[discord.Snowflake(m.Author.ID)]; ok {
+		log.Printf("Ignoring message from %s", m.Author.Tag())
 		return
 	}
 
@@ -161,6 +168,18 @@ var commands = []api.CreateCommandData{
 			{
 				Name:        "query",
 				Description: "Search query (i.e strings.Split)",
+				Type:        discord.StringOption,
+				Required:    true,
+			},
+		},
+	},
+	{
+		Name:        "spec",
+		Description: "Search Go Specification",
+		Options: []discord.CommandOption{
+			{
+				Name:        "query",
+				Description: "Search query",
 				Type:        discord.StringOption,
 				Required:    true,
 			},
