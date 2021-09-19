@@ -54,6 +54,13 @@ func (b *botState) OnCommand(e *gateway.InteractionCreateEvent) {
 			b.handleDocsComponent(e, d)
 			return
 		}
+
+		split := strings.Split(data.CustomID, ".")
+		switch split[0] {
+		case "docs":
+		case "spec":
+			b.handleSpecComponent(e, data, split[1])
+		}
 	}
 }
 

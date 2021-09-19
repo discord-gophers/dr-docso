@@ -12,7 +12,7 @@ const (
 	docLimit = 2800
 	defLimit = 1000
 
-	accentColor = 0x007D9C
+	accentColor = 0x00ADD8
 )
 
 func pkgEmbed(pkg doc.Package, full bool) (discord.Embed, bool) {

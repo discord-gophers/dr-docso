@@ -22,6 +22,7 @@ func QuerySpec() (Spec, error) {
 	spec := Spec{
 		keywords: make(map[string]map[*Node]struct{}),
 		Keywords: make(map[string][]*Node),
+		Headings: make(map[string]*Node),
 	}
 	var h2Node, h3Node, h4Node *Node
 
@@ -56,8 +57,9 @@ func QuerySpec() (Spec, error) {
 				}
 				spec.Nodes = append(spec.Nodes, h2Node)
 			}
-			h2Node = &Node{Level: 2, Heading: s.Text()}
-			h3Node, h4Node = nil, nil
+			text := s.Text()
+			h2Node, h3Node, h4Node = &Node{2, text, nil, nil}, nil, nil
+			spec.Headings[text] = h2Node
 			add(Heading{2, s.Text()})
 		case "h3":
 			if h3Node != nil {
@@ -66,16 +68,22 @@ func QuerySpec() (Spec, error) {
 				}
 				h2Node.Nodes = append(h2Node.Nodes, h3Node)
 			}
-			h3Node = &Node{Level: 3, Heading: s.Text()}
-			h4Node = nil
-			add(Heading{3, s.Text()})
+
+			text := s.Text()
+			h3Node, h4Node = &Node{Level: 3, Heading: text}, nil
+			spec.Headings[text] = h3Node
+			add(Heading{3, text})
 
 		case "h4":
 			if h4Node != nil {
 				h3Node.Nodes = append(h3Node.Nodes, h4Node)
 			}
-			h4Node = &Node{Level: 4, Heading: s.Text()}
-			add(Heading{4, s.Text()})
+
+			text := s.Text()
+			h4Node = &Node{Level: 4, Heading: text}
+			spec.Headings[text] = h4Node
+			add(Heading{4, text})
+
 		case "pre":
 			add(Pre(strings.TrimSpace(s.Text())))
 		case "ul":
@@ -94,6 +102,15 @@ func QuerySpec() (Spec, error) {
 			add(parseText(node))
 		}
 	})
+	if h2Node != nil {
+		if h3Node != nil {
+			if h4Node != nil {
+				h3Node.Nodes = append(h3Node.Nodes, h4Node)
+			}
+			h2Node.Nodes = append(h2Node.Nodes, h3Node)
+		}
+		spec.Nodes = append(spec.Nodes, h2Node)
+	}
 
 	spec.keywords = nil
 	return spec, nil
@@ -154,28 +171,26 @@ func parseText(node *html.Node) (p Paragraph) {
 	for n := node.FirstChild; n != nil; n = n.NextSibling {
 		switch n.Type {
 		case html.TextNode:
-			split := strings.Split(n.Data, "\n")
-			if len(split) == 1 {
-				p = append(p, Text(n.Data))
-				continue
-			}
+			// split := strings.Split(n.Data, "\n")
+			str := strings.ReplaceAll(n.Data, "\n", " ")
+			p = append(p, Text(str))
 
-			var str []string
-			for _, line := range split {
-				if line == "" {
-					continue
-				}
+			// var str []string
+			// for _, line := range split {
+			// 	if line == "" {
+			// 		continue
+			// 	}
 
-				// Dont trim whitespace from the first element. The first
-				// element will be newline if it needs to be trimmed
-				// i.e: <p>Text <a>..</a> and more text</p>
-				//                       ^
-				for strings.HasPrefix(line, " ") && n.PrevSibling == nil {
-					line = line[1:]
-				}
-				str = append(str, line)
-			}
-			p = append(p, Text(strings.Join(str, " ")))
+			// 	// Dont trim whitespace from the first element. The first
+			// 	// element will be newline if it needs to be trimmed
+			// 	// i.e: <p>Text <a>..</a> and more text</p>
+			// 	//                       ^
+			// 	for strings.HasPrefix(line, " ") && n.PrevSibling == nil {
+			// 		line = line[1:]
+			// 	}
+			// 	str = append(str, line)
+			// }
+			// p = append(p, Text(strings.Join(str, " ")))
 
 		case html.ElementNode:
 			switch n.Data {
