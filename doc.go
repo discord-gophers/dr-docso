@@ -174,6 +174,10 @@ func (b *botState) handleDocsText(m *gateway.MessageCreateEvent, query string) {
 
 	data, ok := interactionMap[m.ID.String()]
 	if ok {
+		mu.Lock()
+		interactionMap[m.ID.String()].query = query
+		mu.Unlock()
+
 		b.state.EditMessageComplex(m.ChannelID, data.messageID, api.EditMessageData{
 			Embeds: &[]discord.Embed{embed},
 			Components: &[]discord.Component{
