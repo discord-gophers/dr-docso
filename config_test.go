@@ -10,8 +10,8 @@ import (
 func TestSnowflakeLookup_MarshalJSON(t *testing.T) {
 	lookup := snowflakeLookup{
 		discord.Snowflake(1337): struct{}{},
-		discord.Snowflake(42): struct{}{},
-		discord.Snowflake(777): struct{}{},
+		discord.Snowflake(42):   struct{}{},
+		discord.Snowflake(777):  struct{}{},
 	}
 
 	d, err := json.Marshal(lookup)
@@ -28,12 +28,11 @@ func TestSnowflakeLookup_UnmarshalJSON(t *testing.T) {
 
 	expected := snowflakeLookup{
 		discord.Snowflake(1337): struct{}{},
-		discord.Snowflake(42): struct{}{},
-		discord.Snowflake(777): struct{}{},
+		discord.Snowflake(42):   struct{}{},
+		discord.Snowflake(777):  struct{}{},
 	}
 
 	assert.Equal(t, expected, lookup)
-
 }
 
 func TestConfigFromBytes(t *testing.T) {
@@ -58,8 +57,8 @@ func TestConfigFromBytes(t *testing.T) {
 	assert.NoError(t, err)
 
 	expected := configuration{
-		Prefix:      "dr.",
-		Token:       "--",
+		Prefix: "dr.",
+		Token:  "--",
 		Permissions: commandPermissions{
 			Docs: map[discord.Snowflake]struct{}{
 				1337: {},
@@ -70,7 +69,7 @@ func TestConfigFromBytes(t *testing.T) {
 				},
 			},
 		},
-		Aliases: map[string]string{},
+		Aliases:   map[string]string{},
 		Blacklist: map[discord.Snowflake]struct{}{},
 	}
 
