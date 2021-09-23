@@ -135,7 +135,7 @@ func (h Heading) Markdown() string {
 	case 4:
 		text = h.Text
 	}
-	return fmt.Sprintf("> [%s](%s#%s)\n", text, page, strings.ReplaceAll(text, " ", "_"))
+	return fmt.Sprintf("> [%s](%s#%s)\n", text, page, strings.ReplaceAll(h.Text, " ", "_"))
 }
 
 func (p Paragraph) Markdown() string {
