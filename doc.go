@@ -167,10 +167,22 @@ func (b *botState) handleDocsText(m *gateway.MessageCreateEvent, query string) {
 		return
 	}
 
+	var component discord.Component = selectComponent(m.ID.String(), false)
+	if !more {
+		component = buttonComponent(m.ID.String())
+	}
+
 	data, ok := interactionMap[m.ID.String()]
 	if ok {
-		_, _ = b.state.EditEmbeds(m.ChannelID, data.messageID, embed)
-		_ = b.state.DeleteAllReactions(m.ChannelID, data.messageID)
+		b.state.EditMessageComplex(m.ChannelID, data.messageID, api.EditMessageData{
+			Embeds: &[]discord.Embed{embed},
+			Components: &[]discord.Component{
+				&discord.ActionRowComponent{
+					Components: []discord.Component{component},
+				},
+			},
+		})
+		b.state.DeleteAllReactions(m.ChannelID, data.messageID)
 		return
 	}
 
@@ -182,11 +194,6 @@ func (b *botState) handleDocsText(m *gateway.MessageCreateEvent, query string) {
 		query:   query,
 	}
 	mu.Unlock()
-
-	var component discord.Component = selectComponent(m.ID.String(), false)
-	if !more {
-		component = buttonComponent(m.ID.String())
-	}
 
 	msg, err := b.state.SendMessageComplex(m.ChannelID, api.SendMessageData{
 		Components: []discord.Component{
@@ -200,6 +207,7 @@ func (b *botState) handleDocsText(m *gateway.MessageCreateEvent, query string) {
 		delete(interactionMap, m.ID.String())
 		return
 	}
+
 	mu.Lock()
 	interactionMap[m.ID.String()].messageID = msg.ID
 	mu.Unlock()
@@ -262,6 +270,10 @@ func (b *botState) handleDocsComponent(e *gateway.InteractionCreateEvent, data *
 			&discord.ActionRowComponent{
 				Components: []discord.Component{selectComponent(data.id, true)},
 			},
+		}
+
+		if !hasPerm() {
+			embed = failEmbed("Error", "You do not have the permission to do this.")
 		}
 
 	case "expand":
