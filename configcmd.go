@@ -29,7 +29,7 @@ block:
 			}
 
 			if _, ok := b.cfg.Blacklist[user]; ok {
-				embed = failEmbed("Error", fmt.Sprintf("<@!%s> is already benig ignored.", user))
+				embed = failEmbed("Error", fmt.Sprintf("<@!%s> is already being ignored.", user))
 				break block
 			}
 
@@ -44,7 +44,7 @@ block:
 			user, _ := cmd.Options[0].Snowflake()
 
 			if _, ok := b.cfg.Blacklist[user]; !ok {
-				embed = failEmbed("Error", fmt.Sprintf("<@!%s> is not benig ignored.", user))
+				embed = failEmbed("Error", fmt.Sprintf("<@!%s> is not being ignored.", user))
 				break block
 			}
 
