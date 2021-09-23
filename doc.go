@@ -30,7 +30,6 @@ type interactionData struct {
 	userID    discord.UserID
 	messageID discord.MessageID
 	query     string
-	full      bool
 }
 
 var (
@@ -170,7 +169,8 @@ func (b *botState) handleDocsText(m *gateway.MessageCreateEvent, query string) {
 
 	data, ok := interactionMap[m.ID.String()]
 	if ok {
-		b.state.EditEmbeds(m.ChannelID, data.messageID, embed)
+		_, _ = b.state.EditEmbeds(m.ChannelID, data.messageID, embed)
+		_ = b.state.DeleteAllReactions(m.ChannelID, data.messageID)
 		return
 	}
 
@@ -247,7 +247,6 @@ func (b *botState) handleDocsComponent(e *gateway.InteractionCreateEvent, data *
 	switch action {
 	case "minimize":
 		embed, _ = b.docs(*e.User, data.query, false)
-		data.full = false
 		components = &[]discord.Component{
 			&discord.ActionRowComponent{
 				Components: []discord.Component{selectComponent(data.id, false)},
@@ -257,35 +256,41 @@ func (b *botState) handleDocsComponent(e *gateway.InteractionCreateEvent, data *
 	// Admin or privileged only.
 	// (Only check admin here to reduce total API calls).
 	// If not privileged, send ephemeral instead.
-	case "expand":
+	case "expand.all":
 		embed, _ = b.docs(*e.User, data.query, true)
-		data.full = true
 		components = &[]discord.Component{
 			&discord.ActionRowComponent{
 				Components: []discord.Component{selectComponent(data.id, true)},
 			},
 		}
 
-		if !hasPerm() {
-			_ = b.state.RespondInteraction(e.ID, e.Token, api.InteractionResponse{
-				Type: api.MessageInteractionWithSource,
-				Data: &api.InteractionResponseData{
-					Flags:  api.EphemeralResponse,
-					Embeds: &[]discord.Embed{embed},
-				},
-			})
-			break
+	case "expand":
+		embed, _ = b.docs(*e.User, data.query, true)
+		components = &[]discord.Component{
+			&discord.ActionRowComponent{
+				Components: []discord.Component{selectComponent(data.id, true)},
+			},
 		}
+
+		_ = b.state.RespondInteraction(e.ID, e.Token, api.InteractionResponse{
+			Type: api.MessageInteractionWithSource,
+			Data: &api.InteractionResponseData{
+				Flags:  api.EphemeralResponse,
+				Embeds: &[]discord.Embed{embed},
+			},
+		})
+		return
 
 	case "hide":
 		components = &[]discord.Component{}
-		embed, _ = b.docs(*e.User, data.query, data.full)
+		embed, _ = b.docs(*e.User, data.query, false)
 		embed.Description = ""
-		embed.Footer = nil
 
-		mu.Lock()
-		delete(interactionMap, data.id)
-		mu.Unlock()
+		if hasPerm() {
+			mu.Lock()
+			delete(interactionMap, data.id)
+			mu.Unlock()
+		}
 	}
 
 	if e.GuildID != discord.NullGuildID {
@@ -373,7 +378,7 @@ func selectComponent(id string, full bool) *discord.SelectComponent {
 		}
 	}
 
-	return &discord.SelectComponent{
+	sel := &discord.SelectComponent{
 		CustomID:    id,
 		Placeholder: "Actions",
 		Options: []discord.SelectComponentOption{
@@ -386,6 +391,16 @@ func selectComponent(id string, full bool) *discord.SelectComponent {
 			},
 		},
 	}
+	if !full {
+		sel.Options = append(sel.Options, discord.SelectComponentOption{
+			Label:       "Expand (For everyone)",
+			Value:       "expand.all",
+			Description: "Show more documentation. (Requires permissions)",
+			Emoji:       &discord.ButtonEmoji{Name: "🌏"},
+		})
+	}
+
+	return sel
 }
 
 func buttonComponent(id string) *discord.ButtonComponent {
