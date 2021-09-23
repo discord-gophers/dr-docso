@@ -213,7 +213,7 @@ func (b *botState) handleDocsComponent(e *gateway.InteractionCreateEvent, data *
 	hasRole := e.Member == nil
 	if !hasRole {
 		for _, role := range e.Member.RoleIDs {
-			if _, ok := b.cfg.Permissions.Docs[role]; ok {
+			if _, ok := b.cfg.Permissions.Docs[discord.Snowflake(role)]; ok {
 				hasRole = true
 				break
 			}

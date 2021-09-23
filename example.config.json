@@ -2,13 +2,13 @@
 	"prefix": "dr.",
 	"token": "--",
 	"permissions": {
-		"docs": {
-			"role id (global expand + close others)": {}
-		},
+		"docs": [
+			"role id (global expand + close others)"
+		],
 		"config": {
-			"guild id": {
-				"role id (configure dr-docso)": {}
-			}
+			"guild id": [
+				"role id (configure dr-docso)"
+			]
 		}
 	}
 }
