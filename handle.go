@@ -10,7 +10,6 @@ import (
 	"github.com/diamondburned/arikawa/v3/discord"
 	"github.com/diamondburned/arikawa/v3/gateway"
 	"github.com/diamondburned/arikawa/v3/state"
-	"github.com/diamondburned/arikawa/v3/utils/httputil"
 	"github.com/hhhapz/doc"
 )
 
@@ -55,8 +54,10 @@ func (b *botState) OnCommand(e *gateway.InteractionCreateEvent) {
 			return
 		}
 
-		split := strings.Split(data.CustomID, ".")
+		split := strings.SplitN(data.CustomID, ".", 2)
 		switch split[0] {
+		case "blog":
+			b.handleBlogComponent(e, data, split[1])
 		case "docs":
 		case "spec":
 			b.handleSpecComponent(e, data, split[1])
@@ -92,11 +93,14 @@ func (b *botState) OnMessage(m *gateway.MessageCreateEvent) {
 	switch split[0] {
 	case "docs":
 		b.handleDocsText(m, split[1])
+	case "help":
+		// todo
 	}
 }
 
 func (b *botState) OnMessageEdit(e *gateway.MessageUpdateEvent) {
 	b.OnMessage((*gateway.MessageCreateEvent)(e))
+	b.state.Unreact(e.ChannelID, e.ID, "😕")
 }
 
 func loadCommands(s *state.State, me discord.UserID, cfg configuration) error {
@@ -121,7 +125,6 @@ func loadCommands(s *state.State, me discord.UserID, cfg configuration) error {
 		var cmd *discord.Command
 		var err error
 		if cmd, err = s.CreateCommand(appID, c); err != nil {
-			fmt.Println(string(err.(*httputil.HTTPError).Body))
 			return fmt.Errorf("Could not register: %s, %w", c.Name, err)
 		}
 
@@ -138,7 +141,6 @@ func loadCommands(s *state.State, me discord.UserID, cfg configuration) error {
 				}
 				_, err := s.EditCommandPermissions(appID, guildID, cmd.ID, perms)
 				if err != nil {
-					fmt.Println(string(err.(*httputil.HTTPError).Message))
 					return err
 				}
 			}
@@ -160,11 +162,6 @@ var commands = []api.CreateCommandData{
 				Description: "Search query",
 				Type:        discord.StringOption,
 				Required:    true,
-			},
-			{
-				Name:        "match-desc",
-				Description: "Match on blog description as well as title",
-				Type:        discord.BooleanOption,
 			},
 		},
 	},

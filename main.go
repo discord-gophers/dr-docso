@@ -32,7 +32,7 @@ func run() error {
 		return fmt.Errorf("could not open session: %w", err)
 	}
 
-	searcher := doc.New(http.DefaultClient, godocs.Parser)
+	searcher := doc.New(http.DefaultClient, godocs.Parser, doc.UserAgent("https://github.com/DiscordGophers/dr-docso (Discord Server for Go)"))
 	b := botState{
 		cfg:      cfg,
 		searcher: doc.WithCache(searcher),
