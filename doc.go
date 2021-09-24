@@ -186,7 +186,7 @@ func (b *botState) handleDocsText(m *gateway.MessageCreateEvent, query string) {
 				},
 			},
 		})
-		b.state.DeleteAllReactions(m.ChannelID, data.messageID)
+		b.state.Unreact(m.ChannelID, data.messageID, "😕")
 		return
 	}
 
