@@ -57,6 +57,8 @@ func (b *botState) OnCommand(e *gateway.InteractionCreateEvent) {
 
 		split := strings.Split(data.CustomID, ".")
 		switch split[0] {
+		case "blog":
+			b.handleBlogComponent(e, data, split[1])
 		case "docs":
 		case "spec":
 			b.handleSpecComponent(e, data, split[1])
@@ -92,6 +94,8 @@ func (b *botState) OnMessage(m *gateway.MessageCreateEvent) {
 	switch split[0] {
 	case "docs":
 		b.handleDocsText(m, split[1])
+	case "help":
+		// todo
 	}
 }
 

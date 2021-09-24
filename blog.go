@@ -34,6 +34,10 @@ func (b *botState) updateArticles() {
 	}
 }
 
+const (
+	BlogNoResults = "No results found for %q\n\n To match blog titles and descriptions, try enabling the matchDesc parameter."
+)
+
 func (b *botState) handleBlog(e *gateway.InteractionCreateEvent, d *discord.CommandInteractionData) {
 	// only arg and required, always present
 	query := d.Options[0].String()
@@ -72,14 +76,14 @@ func (b *botState) handleBlog(e *gateway.InteractionCreateEvent, d *discord.Comm
 			}
 
 			total++
-			if total == 5 {
+			if total == 20 {
 				break
 			}
 		}
 	}
 
 	if total == 0 {
-		embed := failEmbed("Error", fmt.Sprintf("No results found for %q", query))
+		embed := failEmbed("Error", fmt.Sprintf(BlogNoResults, query))
 		b.state.RespondInteraction(e.ID, e.Token, api.InteractionResponse{
 			Type: api.MessageInteractionWithSource,
 			Data: &api.InteractionResponseData{
@@ -90,12 +94,49 @@ func (b *botState) handleBlog(e *gateway.InteractionCreateEvent, d *discord.Comm
 	}
 
 	var fields []discord.EmbedField
-
+	var components []discord.SelectComponentOption
 	for _, match := range append(fromTitle, fromDesc...) {
 		fields = append(fields, discord.EmbedField{
 			Name:  fmt.Sprintf("%s, %s", match.Title, match.Date),
 			Value: fmt.Sprintf("*%s*\n%s\n%s", match.Authors, match.Summary, match.URL),
 		})
+		components = append(components, discord.SelectComponentOption{
+			Label:       match.Title,
+			Value:       match.URL,
+			Description: match.Date + " - " + match.Authors,
+		})
+	}
+
+	if len(fields) > 2 {
+		b.state.RespondInteraction(e.ID, e.Token, api.InteractionResponse{
+			Type: api.MessageInteractionWithSource,
+			Data: &api.InteractionResponseData{
+				Flags: api.EphemeralResponse,
+				Embeds: &[]discord.Embed{
+					{
+						Title: fmt.Sprintf("Blog: %d Results", total),
+						Description: fmt.Sprintf(
+							"Search Term: %q\nMatch on description: %t\nTo display publicly, select single post:",
+							query, matchDesc,
+						),
+						Fields: fields,
+						Color:  accentColor,
+					},
+				},
+				Components: &[]discord.Component{
+					&discord.ActionRowComponent{
+						Components: []discord.Component{
+							&discord.SelectComponent{
+								CustomID:    "blog.display",
+								Options:     components,
+								Placeholder: "Display Blog Post",
+							},
+						},
+					},
+				},
+			},
+		})
+		return
 	}
 
 	b.state.RespondInteraction(e.ID, e.Token, api.InteractionResponse{
@@ -111,4 +152,43 @@ func (b *botState) handleBlog(e *gateway.InteractionCreateEvent, d *discord.Comm
 			},
 		},
 	})
+}
+
+func (b *botState) handleBlogComponent(e *gateway.InteractionCreateEvent, data *discord.ComponentInteractionData, cmd string) {
+	switch cmd {
+	case "display":
+		// should be url to post
+		opt := data.Values[0]
+
+		var article blog.Article
+		for _, a := range b.articles {
+			if a.URL == opt {
+				article = a
+			}
+		}
+
+		if article.URL == "" {
+			return
+		}
+
+		err := b.state.RespondInteraction(e.ID, e.Token, api.InteractionResponse{
+			Type: api.MessageInteractionWithSource,
+			Data: &api.InteractionResponseData{
+				Embeds: &[]discord.Embed{
+					{
+						Title:       article.Title,
+						URL:         article.URL,
+						Description: article.Summary,
+						Footer: &discord.EmbedFooter{
+							Text: article.Authors + "\n" + article.Date,
+						},
+						Color: accentColor,
+					},
+				},
+			},
+		})
+		if err != nil {
+			log.Printf("Could not respond to blog interaction: %v", err)
+		}
+	}
 }
