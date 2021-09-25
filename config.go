@@ -42,7 +42,7 @@ func (c *snowflakeLookup) UnmarshalJSON(data []byte) error {
 
 func (c snowflakeLookup) MarshalJSON() ([]byte, error) {
 	snowflakes := make([]discord.Snowflake, 0, len(c))
-	for snowflake, _ := range c {
+	for snowflake := range c {
 		snowflakes = append(snowflakes, snowflake)
 	}
 
