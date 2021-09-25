@@ -22,7 +22,7 @@ jobs:
       run: go build
     - name: Upload Artifact
       uses: actions/upload-artifact@v2
-#      if: github.event_name == 'release' && github.event.action == 'created'
+      if: github.event_name == 'release' && github.event.action == 'created'
       with:
         name: dr-docso-binary
         path: dr-docso
@@ -35,5 +35,5 @@ jobs:
       - uses: actions/download-artifact@v2
         with:
           name: dr-docso-binary
-      - name: list
-        run: ls -lahtr
+      - name: release
+        run: sudo docso-release
