@@ -40,7 +40,7 @@ func (b *botState) updateArticles() {
 }
 
 const (
-	BlogNoResults = "No results found for %q\n\n To match blog titles and descriptions, try enabling the matchDesc parameter."
+	BlogNoResults = "No results found for %q""
 )
 
 func (b *botState) handleBlog(e *gateway.InteractionCreateEvent, d *discord.CommandInteractionData) {
