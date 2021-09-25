@@ -20,11 +20,14 @@ jobs:
       run: go vet ./...
     - name: go build
       run: go build
+    - name: generate version
+      run: echo "::set-output name=version::$(git describe --tags --dirty)"
+      id: generate-version
     - name: Upload Artifact
       uses: actions/upload-artifact@v2
 #      if: github.event_name == 'release' && github.event.action == 'created'
       with:
-        name: dr-docso-${{ github.ref }}
+        name: dr-docso-${{ steps.generate-version.outputs.version }}
         path: dr-docso
         retention-days: 5
   release:
@@ -34,6 +37,6 @@ jobs:
     steps:
       - uses: actions/download-artifact@v2
         with:
-          name: dr-docso-${{ github.ref }}
+          name: dr-docso-${{ jobs.codestyle.teps.generate-version.outputs.version }}
       - name: list
         run: ls -lahtr
