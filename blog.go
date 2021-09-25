@@ -58,96 +58,86 @@ func (b *botState) handleBlog(e *gateway.InteractionCreateEvent, d *discord.Comm
 	}
 
 	fromTitle, fromDesc, total := blog.MatchAll(b.articles, query)
-	if total == 0 {
-		embed := failEmbed("Error", fmt.Sprintf("No results found for %q", query))
+	articles := append(fromTitle, fromDesc...)
+	fields, opts := articleFields(articles)
+
+	switch {
+	case total == 0:
 		b.state.RespondInteraction(e.ID, e.Token, api.InteractionResponse{
 			Type: api.MessageInteractionWithSource,
 			Data: &api.InteractionResponseData{
 				Flags:  api.EphemeralResponse,
-				Embeds: &[]discord.Embed{embed},
+				Embeds: &[]discord.Embed{failEmbed("Error", fmt.Sprintf("No results found for %q", query))},
 			},
 		})
-		return
-	}
 
-	articles := append(fromTitle, fromDesc...)
-	fields, opts := articleFields(articles)
-	if total <= 2 {
-		embed := discord.Embed{
-			Title:  fmt.Sprintf("Blog: %q", query),
-			Fields: fields,
-			Color:  accentColor,
-		}
-		if total == 1 {
-			embed = articles[0].Display()
-		}
+	case total == 1:
 		b.state.RespondInteraction(e.ID, e.Token, api.InteractionResponse{
 			Type: api.MessageInteractionWithSource,
 			Data: &api.InteractionResponseData{
-				Embeds: &[]discord.Embed{embed},
+				Embeds: &[]discord.Embed{articles[0].Display()},
 			},
 		})
-		return
-	}
 
-	if len(opts) > 5 {
-		opts = opts[:5]
-	}
-	comps := []discord.Component{
-		&discord.ActionRowComponent{
-			Components: []discord.Component{
-				&discord.SelectComponent{
-					CustomID:    "blog.display",
-					Options:     opts,
-					Placeholder: "Display Blog Post",
-				},
-			},
-		},
-	}
-
-	if len(fields) > 5 {
-		fields = fields[:5]
-		comps = append(comps, &discord.ActionRowComponent{
-			Components: []discord.Component{
-				&discord.ButtonComponent{
-					Label:    "Prev Page",
-					CustomID: "blog.prev." + query,
-					Style:    discord.SecondaryButton,
-					Emoji:    &discord.ButtonEmoji{Name: "⬅️"},
-				},
-				&discord.ButtonComponent{
-					Label:    "Next Page",
-					CustomID: "blog.next." + query,
-					Style:    discord.SecondaryButton,
-					Emoji:    &discord.ButtonEmoji{Name: "➡️"},
-				},
-			},
-		})
-	}
-
-	p := int(math.Ceil(float64(total) / float64(5)))
-	b.state.RespondInteraction(e.ID, e.Token, api.InteractionResponse{
-		Type: api.MessageInteractionWithSource,
-		Data: &api.InteractionResponseData{
-			Flags: api.EphemeralResponse,
-			Embeds: &[]discord.Embed{
-				{
-					Title: fmt.Sprintf("Blog: %d Results", total),
-					Footer: &discord.EmbedFooter{
-						Text: fmt.Sprintf("Page 1 of %d\nTo display publicly, select a single post", p),
+	case total == 2:
+		b.state.RespondInteraction(e.ID, e.Token, api.InteractionResponse{
+			Type: api.MessageInteractionWithSource,
+			Data: &api.InteractionResponseData{
+				Embeds: &[]discord.Embed{
+					{
+						Title:  fmt.Sprintf("Blog: %q", query),
+						Fields: fields,
+						Color:  accentColor,
 					},
-					Fields: append([]discord.EmbedField{
-						{
-							Name:  "Search Term",
-							Value: query,
-						},
-					}, fields...),
-					Color: accentColor,
 				},
 			},
-			Components: &comps,
-		},
-	})
+		})
+
+	case total > 5:
+		opts = opts[:5]
+		fields = fields[:5]
+		fallthrough
+
+	default:
+		comps := []discord.Component{
+			&discord.ActionRowComponent{
+				Components: []discord.Component{
+					&discord.SelectComponent{
+						CustomID:    "blog.display",
+						Options:     opts,
+						Placeholder: "Display Blog Post",
+					},
+				},
+			},
+		}
+		if total > 5 {
+			comps = append(comps, paginateButtons(query))
+		}
+
+		p := int(math.Ceil(float64(total) / float64(5)))
+		b.state.RespondInteraction(e.ID, e.Token, api.InteractionResponse{
+			Type: api.MessageInteractionWithSource,
+			Data: &api.InteractionResponseData{
+				Flags: api.EphemeralResponse,
+				Embeds: &[]discord.Embed{
+					{
+						Title: fmt.Sprintf("Blog: %d Results", total),
+						Footer: &discord.EmbedFooter{
+							Text: fmt.Sprintf("Page 1 of %d\nTo display publicly, select a single post", p),
+						},
+						Fields: append([]discord.EmbedField{
+							{
+								Name:  "Search Term",
+								Value: fmt.Sprintf("%q", query),
+							},
+						}, fields...),
+						Color: accentColor,
+					},
+				},
+				Components: &comps,
+			},
+		})
+	}
 }
 
 func (b *botState) handleBlogComponent(e *gateway.InteractionCreateEvent, data *discord.ComponentInteractionData, cmd string) {
@@ -202,22 +192,7 @@ func (b *botState) handleBlogComponent(e *gateway.InteractionCreateEvent, data *
 				},
 			},
 		},
-		&discord.ActionRowComponent{
-			Components: []discord.Component{
-				&discord.ButtonComponent{
-					Label:    "Prev Page",
-					CustomID: "blog.prev." + query,
-					Style:    discord.SecondaryButton,
-					Emoji:    &discord.ButtonEmoji{Name: "⬅️"},
-				},
-				&discord.ButtonComponent{
-					Label:    "Next Page",
-					CustomID: "blog.next." + query,
-					Style:    discord.SecondaryButton,
-					Emoji:    &discord.ButtonEmoji{Name: "➡️"},
-				},
-			},
-		},
+		paginateButtons(query),
 	}
 
 	b.state.RespondInteraction(e.ID, e.Token, api.InteractionResponse{
@@ -233,7 +208,7 @@ func (b *botState) handleBlogComponent(e *gateway.InteractionCreateEvent, data *
 					Fields: append([]discord.EmbedField{
 						{
 							Name:  "Search Term",
-							Value: query,
+							Value: fmt.Sprintf("%q", query),
 						},
 					}, fields...),
 					Color: accentColor,
@@ -284,4 +259,23 @@ func articleFields(articles []blog.Article) (fields []discord.EmbedField, opts [
 		})
 	}
 	return
+}
+
+func paginateButtons(query string) *discord.ActionRowComponent {
+	return &discord.ActionRowComponent{
+		Components: []discord.Component{
+			&discord.ButtonComponent{
+				Label:    "Prev Page",
+				CustomID: "blog.prev." + query,
+				Style:    discord.SecondaryButton,
+				Emoji:    &discord.ButtonEmoji{Name: "⬅️"},
+			},
+			&discord.ButtonComponent{
+				Label:    "Next Page",
+				CustomID: "blog.next." + query,
+				Style:    discord.SecondaryButton,
+				Emoji:    &discord.ButtonEmoji{Name: "➡️"},
+			},
+		},
+	}
 }
