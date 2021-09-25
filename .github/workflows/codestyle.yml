@@ -1,0 +1,17 @@
+name: Check codestyle
+on: [push, pull_request]
+jobs:
+  codestyle:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Setup Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: 1.17
+    - name: checkout code
+      uses: actions/checkout@v2
+    - name: go fmt
+      run: |
+        go fmt
+        go build
+        go test
