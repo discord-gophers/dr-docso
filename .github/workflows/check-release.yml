@@ -36,4 +36,4 @@ jobs:
         with:
           name: dr-docso-binary
       - name: release
-        run: sudo docso-release
+        run: sudo docso-release dr-docso
