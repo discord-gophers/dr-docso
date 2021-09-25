@@ -100,6 +100,7 @@ func (b *botState) OnMessage(m *gateway.MessageCreateEvent) {
 
 func (b *botState) OnMessageEdit(e *gateway.MessageUpdateEvent) {
 	b.OnMessage((*gateway.MessageCreateEvent)(e))
+	b.state.Unreact(e.ChannelID, e.ID, "😕")
 }
 
 func loadCommands(s *state.State, me discord.UserID, cfg configuration) error {

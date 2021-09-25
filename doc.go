@@ -186,7 +186,6 @@ func (b *botState) handleDocsText(m *gateway.MessageCreateEvent, query string) {
 				},
 			},
 		})
-		b.state.Unreact(m.ChannelID, data.messageID, "😕")
 		return
 	}
 

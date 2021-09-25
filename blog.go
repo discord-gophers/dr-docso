@@ -61,8 +61,8 @@ func (b *botState) handleBlog(e *gateway.InteractionCreateEvent, d *discord.Comm
 	articles := append(fromTitle, fromDesc...)
 	fields, opts := articleFields(articles)
 
-	switch {
-	case total == 0:
+	switch total {
+	case 0:
 		b.state.RespondInteraction(e.ID, e.Token, api.InteractionResponse{
 			Type: api.MessageInteractionWithSource,
 			Data: &api.InteractionResponseData{
@@ -70,16 +70,18 @@ func (b *botState) handleBlog(e *gateway.InteractionCreateEvent, d *discord.Comm
 				Embeds: &[]discord.Embed{failEmbed("Error", fmt.Sprintf("No results found for %q", query))},
 			},
 		})
+		return
 
-	case total == 1:
+	case 1:
 		b.state.RespondInteraction(e.ID, e.Token, api.InteractionResponse{
 			Type: api.MessageInteractionWithSource,
 			Data: &api.InteractionResponseData{
 				Embeds: &[]discord.Embed{articles[0].Display()},
 			},
 		})
+		return
 
-	case total == 2:
+	case 2:
 		b.state.RespondInteraction(e.ID, e.Token, api.InteractionResponse{
 			Type: api.MessageInteractionWithSource,
 			Data: &api.InteractionResponseData{
@@ -92,52 +94,49 @@ func (b *botState) handleBlog(e *gateway.InteractionCreateEvent, d *discord.Comm
 				},
 			},
 		})
+		return
+	}
 
-	case total > 5:
+	comps := make([]discord.Component, 1)
+	if total > 5 {
 		opts = opts[:5]
 		fields = fields[:5]
-		fallthrough
-
-	default:
-		comps := []discord.Component{
-			&discord.ActionRowComponent{
-				Components: []discord.Component{
-					&discord.SelectComponent{
-						CustomID:    "blog.display",
-						Options:     opts,
-						Placeholder: "Display Blog Post",
-					},
-				},
-			},
-		}
-		if total > 5 {
-			comps = append(comps, paginateButtons(query))
-		}
-
-		p := int(math.Ceil(float64(total) / float64(5)))
-		b.state.RespondInteraction(e.ID, e.Token, api.InteractionResponse{
-			Type: api.MessageInteractionWithSource,
-			Data: &api.InteractionResponseData{
-				Flags: api.EphemeralResponse,
-				Embeds: &[]discord.Embed{
-					{
-						Title: fmt.Sprintf("Blog: %d Results", total),
-						Footer: &discord.EmbedFooter{
-							Text: fmt.Sprintf("Page 1 of %d\nTo display publicly, select a single post", p),
-						},
-						Fields: append([]discord.EmbedField{
-							{
-								Name:  "Search Term",
-								Value: fmt.Sprintf("%q", query),
-							},
-						}, fields...),
-						Color: accentColor,
-					},
-				},
-				Components: &comps,
-			},
-		})
+		comps = append(comps, paginateButtons(query))
 	}
+
+	comps[0] = &discord.ActionRowComponent{
+		Components: []discord.Component{
+			&discord.SelectComponent{
+				CustomID:    "blog.display",
+				Options:     opts,
+				Placeholder: "Display Blog Post",
+			},
+		},
+	}
+
+	p := int(math.Ceil(float64(total) / float64(5)))
+	b.state.RespondInteraction(e.ID, e.Token, api.InteractionResponse{
+		Type: api.MessageInteractionWithSource,
+		Data: &api.InteractionResponseData{
+			Flags: api.EphemeralResponse,
+			Embeds: &[]discord.Embed{
+				{
+					Title: fmt.Sprintf("Blog: %d Results", total),
+					Footer: &discord.EmbedFooter{
+						Text: fmt.Sprintf("Page 1 of %d\nTo display publicly, select a single post", p),
+					},
+					Fields: append([]discord.EmbedField{
+						{
+							Name:  "Search Term",
+							Value: fmt.Sprintf("%q", query),
+						},
+					}, fields...),
+					Color: accentColor,
+				},
+			},
+			Components: &comps,
+		},
+	})
 }
 
 func (b *botState) handleBlogComponent(e *gateway.InteractionCreateEvent, data *discord.ComponentInteractionData, cmd string) {
@@ -226,6 +225,7 @@ func (b *botState) BlogDisplay(e *gateway.InteractionCreateEvent, url string) {
 	for _, a := range b.articles {
 		if a.URL == url {
 			article = a
+			break
 		}
 	}
 
