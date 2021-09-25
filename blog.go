@@ -3,13 +3,18 @@ package main
 import (
 	"fmt"
 	"log"
+	"math"
 	"net/http"
+	"regexp"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/DiscordGophers/dr-docso/blog"
 	"github.com/diamondburned/arikawa/v3/api"
 	"github.com/diamondburned/arikawa/v3/discord"
 	"github.com/diamondburned/arikawa/v3/gateway"
+	"github.com/diamondburned/arikawa/v3/utils/json/option"
 )
 
 func (b *botState) updateArticles() {
@@ -42,12 +47,7 @@ func (b *botState) handleBlog(e *gateway.InteractionCreateEvent, d *discord.Comm
 	// only arg and required, always present
 	query := d.Options[0].String()
 
-	var matchDesc bool
-	if len(d.Options) > 1 {
-		matchDesc, _ = d.Options[0].Bool()
-	}
-
-	log.Printf("%s used blog(%q, %t)", e.User.Tag(), query, matchDesc)
+	log.Printf("%s used blog(%q)", e.User.Tag(), query)
 
 	if len(query) < 3 || len(query) > 20 {
 		embed := failEmbed("Error", "Your query must be between 3 and 20 characters.")
@@ -61,27 +61,7 @@ func (b *botState) handleBlog(e *gateway.InteractionCreateEvent, d *discord.Comm
 		return
 	}
 
-	var fromTitle, fromDesc []blog.Article
-	var total int
-
-	for _, a := range b.articles {
-		if ok, typ := a.Match(query); ok {
-			switch {
-			case typ == blog.MatchTitle:
-				fromTitle = append(fromTitle, a)
-			case typ == blog.MatchDesc && matchDesc:
-				fromDesc = append(fromDesc, a)
-			default:
-				continue
-			}
-
-			total++
-			if total == 20 {
-				break
-			}
-		}
-	}
-
+	fromTitle, fromDesc, total := blog.MatchAll(b.articles, query)
 	if total == 0 {
 		embed := failEmbed("Error", fmt.Sprintf(BlogNoResults, query))
 		b.state.RespondInteraction(e.ID, e.Token, api.InteractionResponse{
@@ -92,64 +72,84 @@ func (b *botState) handleBlog(e *gateway.InteractionCreateEvent, d *discord.Comm
 			},
 		})
 	}
+	articles := append(fromTitle, fromDesc...)
 
-	var fields []discord.EmbedField
-	var components []discord.SelectComponentOption
-	for _, match := range append(fromTitle, fromDesc...) {
-		fields = append(fields, discord.EmbedField{
-			Name:  fmt.Sprintf("%s, %s", match.Title, match.Date),
-			Value: fmt.Sprintf("*%s*\n%s\n%s", match.Authors, match.Summary, match.URL),
-		})
-		components = append(components, discord.SelectComponentOption{
-			Label:       match.Title,
-			Value:       match.URL,
-			Description: match.Date + " - " + match.Authors,
-		})
-	}
+	fields, opts := articleFields(articles)
 
-	if len(fields) > 2 {
+	if total <= 2 {
+		embed := discord.Embed{
+			Title:  fmt.Sprintf("Blog: %q", query),
+			Fields: fields,
+			Color:  accentColor,
+		}
+		if total == 1 {
+			embed = articles[0].Display()
+		}
 		b.state.RespondInteraction(e.ID, e.Token, api.InteractionResponse{
 			Type: api.MessageInteractionWithSource,
 			Data: &api.InteractionResponseData{
-				Flags: api.EphemeralResponse,
-				Embeds: &[]discord.Embed{
-					{
-						Title: fmt.Sprintf("Blog: %d Results", total),
-						Description: fmt.Sprintf(
-							"Search Term: %q\nMatch on description: %t\nTo display publicly, select single post:",
-							query, matchDesc,
-						),
-						Fields: fields,
-						Color:  accentColor,
-					},
-				},
-				Components: &[]discord.Component{
-					&discord.ActionRowComponent{
-						Components: []discord.Component{
-							&discord.SelectComponent{
-								CustomID:    "blog.display",
-								Options:     components,
-								Placeholder: "Display Blog Post",
-							},
-						},
-					},
-				},
+				Embeds: &[]discord.Embed{embed},
 			},
 		})
 		return
 	}
 
+	if len(opts) > 5 {
+		opts = opts[:5]
+	}
+	comps := []discord.Component{
+		&discord.ActionRowComponent{
+			Components: []discord.Component{
+				&discord.SelectComponent{
+					CustomID:    "blog.display",
+					Options:     opts,
+					Placeholder: "Display Blog Post",
+				},
+			},
+		},
+	}
+
+	if len(fields) > 5 {
+		fields = fields[:5]
+		comps = append(comps, &discord.ActionRowComponent{
+			Components: []discord.Component{
+				&discord.ButtonComponent{
+					Label:    "Prev Page",
+					CustomID: "blog.prev." + query,
+					Style:    discord.SecondaryButton,
+					Emoji:    &discord.ButtonEmoji{Name: "⬅️"},
+				},
+				&discord.ButtonComponent{
+					Label:    "Next Page",
+					CustomID: "blog.next." + query,
+					Style:    discord.SecondaryButton,
+					Emoji:    &discord.ButtonEmoji{Name: "➡️"},
+				},
+			},
+		})
+	}
+
+	p := int(math.Ceil(float64(total) / float64(5)))
 	b.state.RespondInteraction(e.ID, e.Token, api.InteractionResponse{
 		Type: api.MessageInteractionWithSource,
 		Data: &api.InteractionResponseData{
+			Flags: api.EphemeralResponse,
 			Embeds: &[]discord.Embed{
 				{
-					Title:       fmt.Sprintf("Blog: %d Results", total),
-					Description: fmt.Sprintf("Search Term: %q\nMatch on description: %t", query, matchDesc),
-					Fields:      fields,
-					Color:       accentColor,
+					Title: fmt.Sprintf("Blog: %d Results", total),
+					Footer: &discord.EmbedFooter{
+						Text: fmt.Sprintf("Page 1 of %d\nTo display publicly, select a single post", p),
+					},
+					Fields: append([]discord.EmbedField{
+						{
+							Name:  "Search Term",
+							Value: query,
+						},
+					}, fields...),
+					Color: accentColor,
 				},
 			},
+			Components: &comps,
 		},
 	})
 }
@@ -157,38 +157,144 @@ func (b *botState) handleBlog(e *gateway.InteractionCreateEvent, d *discord.Comm
 func (b *botState) handleBlogComponent(e *gateway.InteractionCreateEvent, data *discord.ComponentInteractionData, cmd string) {
 	switch cmd {
 	case "display":
-		// should be url to post
-		opt := data.Values[0]
+		b.BlogDisplay(e, data.Values[0])
+		return
+	}
 
-		var article blog.Article
-		for _, a := range b.articles {
-			if a.URL == opt {
-				article = a
-			}
-		}
+	split := strings.SplitN(cmd, ".", 2)
+	query := split[1]
 
-		if article.URL == "" {
-			return
-		}
+	embed := e.Message.Embeds[0]
+	matches := pageRe.FindStringSubmatch(embed.Footer.Text)
+	if len(matches) != 3 {
+		return
+	}
 
-		err := b.state.RespondInteraction(e.ID, e.Token, api.InteractionResponse{
-			Type: api.MessageInteractionWithSource,
-			Data: &api.InteractionResponseData{
-				Embeds: &[]discord.Embed{
-					{
-						Title:       article.Title,
-						URL:         article.URL,
-						Description: article.Summary,
-						Footer: &discord.EmbedFooter{
-							Text: article.Authors + "\n" + article.Date,
-						},
-						Color: accentColor,
-					},
+	cur, _ := strconv.Atoi(matches[1])
+
+	switch split[0] {
+	case "prev":
+		cur--
+	case "next":
+		cur++
+	}
+
+	fromTitle, fromDesc, total := blog.MatchAll(b.articles, query)
+	p := int(math.Ceil(float64(total) / float64(5)))
+	if cur < 1 || cur > p {
+		b.state.RespondInteraction(e.ID, e.Token, api.InteractionResponse{
+			Type: api.UpdateMessage, Data: &api.InteractionResponseData{},
+		})
+		return
+	}
+	fields, opts := articleFields(append(fromTitle, fromDesc...))
+	if cur != p {
+		fields = fields[(cur-1)*5 : cur*5]
+		opts = opts[(cur-1)*5 : cur*5]
+	} else {
+		fields = fields[(cur-1)*5:]
+		opts = opts[(cur-1)*5:]
+	}
+
+	comps := []discord.Component{
+		&discord.ActionRowComponent{
+			Components: []discord.Component{
+				&discord.SelectComponent{
+					CustomID:    "blog.display",
+					Options:     opts,
+					Placeholder: "Display Blog Post",
 				},
 			},
-		})
-		if err != nil {
-			log.Printf("Could not respond to blog interaction: %v", err)
+		},
+		&discord.ActionRowComponent{
+			Components: []discord.Component{
+				&discord.ButtonComponent{
+					Label:    "Prev Page",
+					CustomID: "blog.prev." + query,
+					Style:    discord.SecondaryButton,
+					Emoji:    &discord.ButtonEmoji{Name: "⬅️"},
+				},
+				&discord.ButtonComponent{
+					Label:    "Next Page",
+					CustomID: "blog.next." + query,
+					Style:    discord.SecondaryButton,
+					Emoji:    &discord.ButtonEmoji{Name: "➡️"},
+				},
+			},
+		},
+	}
+
+	b.state.RespondInteraction(e.ID, e.Token, api.InteractionResponse{
+		Type: api.UpdateMessage,
+		Data: &api.InteractionResponseData{
+			Flags: api.EphemeralResponse,
+			Embeds: &[]discord.Embed{
+				{
+					Title: fmt.Sprintf("Blog: %d Results", total),
+					Footer: &discord.EmbedFooter{
+						Text: fmt.Sprintf("Page %d of %d\nTo display publicly, select a single post", cur, p),
+					},
+					Fields: append([]discord.EmbedField{
+						{
+							Name:  "Search Term",
+							Value: query,
+						},
+					}, fields...),
+					Color: accentColor,
+				},
+			},
+			Components: &comps,
+		},
+	})
+}
+
+var pageRe = regexp.MustCompile(`Page (\d+) of (\d+)`)
+
+func (b *botState) BlogDisplay(e *gateway.InteractionCreateEvent, url string) {
+	var article blog.Article
+	for _, a := range b.articles {
+		if a.URL == url {
+			article = a
 		}
 	}
+
+	if article.URL == "" {
+		return
+	}
+
+	b.state.RespondInteraction(e.ID, e.Token, api.InteractionResponse{
+		Type: api.UpdateMessage,
+		Data: &api.InteractionResponseData{
+			Components: &[]discord.Component{},
+		},
+	})
+	b.state.CreateInteractionFollowup(e.AppID, e.Token, api.InteractionResponseData{
+		Content: option.NewNullableString(e.User.Tag() + ":"),
+		Embeds:  &[]discord.Embed{article.Display()},
+	})
+}
+
+func articleFields(articles []blog.Article) (fields []discord.EmbedField, opts []discord.SelectComponentOption) {
+	for _, a := range articles {
+		fields = append(fields, discord.EmbedField{
+			Name:  fmt.Sprintf("%s, %s", a.Title, a.Date),
+			Value: fmt.Sprintf("*%s*\n%s\n%s", a.Authors, a.Summary, a.URL),
+		})
+
+		if len(a.Title) > 100 {
+			fmt.Println(a.Title)
+		}
+		if len(a.URL) > 100 {
+			fmt.Println(a.URL)
+		}
+		if len(a.Authors) > 100 {
+			fmt.Println(a.Authors)
+		}
+		opts = append(opts, discord.SelectComponentOption{
+			Label:       a.Title,
+			Value:       a.URL,
+			Description: a.Authors,
+		})
+	}
+	return
 }

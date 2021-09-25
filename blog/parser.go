@@ -37,6 +37,9 @@ func Articles(client *http.Client) ([]Article, error) {
 				Date:    s.Find(".date").Text(),
 				Authors: s.Find(".author").Text(),
 			}
+			if article.Authors == "" {
+				article.Authors = "No authors specified"
+			}
 			article.titleLower = strings.ToLower(article.Title)
 
 		case "blogsummary":

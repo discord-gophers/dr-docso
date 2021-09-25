@@ -55,7 +55,7 @@ func (b *botState) OnCommand(e *gateway.InteractionCreateEvent) {
 			return
 		}
 
-		split := strings.Split(data.CustomID, ".")
+		split := strings.SplitN(data.CustomID, ".", 2)
 		switch split[0] {
 		case "blog":
 			b.handleBlogComponent(e, data, split[1])
@@ -164,11 +164,6 @@ var commands = []api.CreateCommandData{
 				Description: "Search query",
 				Type:        discord.StringOption,
 				Required:    true,
-			},
-			{
-				Name:        "match-desc",
-				Description: "Match on blog description as well as title",
-				Type:        discord.BooleanOption,
 			},
 		},
 	},
