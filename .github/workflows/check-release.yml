@@ -23,8 +23,9 @@ jobs:
       run: go build
     - name: Upload Artifact
       uses: actions/upload-artifact@v2
+#      if: github.event_name == 'release' && github.event.action == 'created'
       with:
-        name: dr-docso-${{ GITHUB_REF }}
+        name: dr-docso-${{ env.GITHUB_REF }}
         path: dr-docso
         retention-days: 5
   release:
@@ -34,6 +35,6 @@ jobs:
     steps:
       - uses: actions/download-artifact@v2
         with:
-          name: dr-docso-${{ GITHUB_REF }}
+          name: dr-docso-${{ env.GITHUB_REF }}
       - name: list
         run: ls -lahtr
