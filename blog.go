@@ -40,7 +40,7 @@ func (b *botState) updateArticles() {
 }
 
 const (
-	BlogNoResults = "No results found for %q""
+	BlogNoResults = "No results found for %q"
 )
 
 func (b *botState) handleBlog(e *gateway.InteractionCreateEvent, d *discord.CommandInteractionData) {
@@ -281,15 +281,6 @@ func articleFields(articles []blog.Article) (fields []discord.EmbedField, opts [
 			Value: fmt.Sprintf("*%s*\n%s\n%s", a.Authors, a.Summary, a.URL),
 		})
 
-		if len(a.Title) > 100 {
-			fmt.Println(a.Title)
-		}
-		if len(a.URL) > 100 {
-			fmt.Println(a.URL)
-		}
-		if len(a.Authors) > 100 {
-			fmt.Println(a.Authors)
-		}
 		opts = append(opts, discord.SelectComponentOption{
 			Label:       a.Title,
 			Value:       a.URL,

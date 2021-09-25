@@ -10,7 +10,6 @@ import (
 	"github.com/diamondburned/arikawa/v3/discord"
 	"github.com/diamondburned/arikawa/v3/gateway"
 	"github.com/diamondburned/arikawa/v3/state"
-	"github.com/diamondburned/arikawa/v3/utils/httputil"
 	"github.com/hhhapz/doc"
 )
 
@@ -125,7 +124,6 @@ func loadCommands(s *state.State, me discord.UserID, cfg configuration) error {
 		var cmd *discord.Command
 		var err error
 		if cmd, err = s.CreateCommand(appID, c); err != nil {
-			fmt.Println(string(err.(*httputil.HTTPError).Body))
 			return fmt.Errorf("Could not register: %s, %w", c.Name, err)
 		}
 
@@ -142,7 +140,6 @@ func loadCommands(s *state.State, me discord.UserID, cfg configuration) error {
 				}
 				_, err := s.EditCommandPermissions(appID, guildID, cmd.ID, perms)
 				if err != nil {
-					fmt.Println(string(err.(*httputil.HTTPError).Message))
 					return err
 				}
 			}
