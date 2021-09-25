@@ -23,7 +23,7 @@ func run() error {
 	update = *updateVar
 
 	cfg := config()
-	   if cfg.Token == "" {
+	if cfg.Token == "" {
 		return fmt.Errorf("no token provided")
 	}
 
