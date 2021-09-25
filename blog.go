@@ -67,11 +67,11 @@ func (b *botState) handleBlog(e *gateway.InteractionCreateEvent, d *discord.Comm
 				Embeds: &[]discord.Embed{embed},
 			},
 		})
+		return
 	}
+
 	articles := append(fromTitle, fromDesc...)
-
 	fields, opts := articleFields(articles)
-
 	if total <= 2 {
 		embed := discord.Embed{
 			Title:  fmt.Sprintf("Blog: %q", query),
