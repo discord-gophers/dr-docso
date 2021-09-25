@@ -39,10 +39,6 @@ func (b *botState) updateArticles() {
 	}
 }
 
-const (
-	BlogNoResults = "No results found for %q"
-)
-
 func (b *botState) handleBlog(e *gateway.InteractionCreateEvent, d *discord.CommandInteractionData) {
 	// only arg and required, always present
 	query := d.Options[0].String()
@@ -63,7 +59,7 @@ func (b *botState) handleBlog(e *gateway.InteractionCreateEvent, d *discord.Comm
 
 	fromTitle, fromDesc, total := blog.MatchAll(b.articles, query)
 	if total == 0 {
-		embed := failEmbed("Error", fmt.Sprintf(BlogNoResults, query))
+		embed := failEmbed("Error", fmt.Sprintf("No results found for %q", query))
 		b.state.RespondInteraction(e.ID, e.Token, api.InteractionResponse{
 			Type: api.MessageInteractionWithSource,
 			Data: &api.InteractionResponseData{
