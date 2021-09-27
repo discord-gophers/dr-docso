@@ -552,6 +552,7 @@ var stdlibPackages = map[string]string{
 	"jsonrpc":   "net/rpc/jsonrpc",
 	"smtp":      "net/smtp",
 	"textproto": "net/textproto",
+	"url":       "net/url",
 
 	"exec":   "os/exec",
 	"signal": "os/signal",
