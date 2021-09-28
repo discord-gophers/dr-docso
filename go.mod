@@ -8,7 +8,7 @@ require (
 	github.com/dustin/go-humanize v1.0.0
 	github.com/hhhapz/doc v0.4.1
 	github.com/stretchr/testify v1.7.0
-	golang.org/x/net v0.0.0-20210924151903-3ad01bbaa167
+	golang.org/x/net v0.0.0-20210928044308-7d9f5e0b762b
 )
 
 require (
