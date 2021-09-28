@@ -16,33 +16,41 @@ type Article struct {
 
 	Summary      string
 	summaryLower string
+
+	Slug string
 }
 
 type MatchType uint8
 
 const (
-	MatchTitle MatchType = iota
+	NoMatch MatchType = iota
+	MatchTitle
 	MatchDesc
+	MatchExact
 )
 
 func MatchAll(articles []Article, keyword string) (title []Article, desc []Article, total int) {
 	for _, a := range articles {
-		if ok, typ := a.Match(keyword); ok {
-			total++
-			switch {
-			case typ == MatchTitle:
-				title = append(title, a)
-			case typ == MatchDesc:
-				desc = append(desc, a)
-			default:
-				continue
-			}
+		switch a.Match(keyword) {
+		case NoMatch:
+			continue
+		case MatchExact:
+			return []Article{a}, nil, 1
+		case MatchTitle, MatchDesc:
+			title = append(title, a)
+		default:
+			continue
 		}
+		total++
 	}
 	return
 }
 
-func (a Article) Match(keyword string) (bool, MatchType) {
+func (a Article) Match(keyword string) MatchType {
+	if a.Slug == keyword {
+		return MatchExact
+	}
+
 	f := strings.Fields(strings.ToLower(keyword))
 
 	match := MatchDesc
@@ -55,9 +63,9 @@ func (a Article) Match(keyword string) (bool, MatchType) {
 		if strings.Contains(a.summaryLower, s) {
 			continue
 		}
-		return false, 0
+		return NoMatch
 	}
-	return true, match
+	return match
 }
 
 func (a Article) Display() discord.Embed {

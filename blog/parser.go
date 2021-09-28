@@ -3,6 +3,7 @@ package blog
 import (
 	"fmt"
 	"net/http"
+	"path"
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
@@ -31,15 +32,19 @@ func Articles(client *http.Client) ([]Article, error) {
 		switch class {
 		case "blogtitle":
 			a := s.Find("a")
+			uri := a.AttrOr("href", "")
+
 			article = Article{
 				Title:   a.Text(),
-				URL:     base + a.AttrOr("href", ""),
+				URL:     base + uri,
 				Date:    s.Find(".date").Text(),
 				Authors: s.Find(".author").Text(),
+				Slug:    path.Base(uri),
 			}
 			if article.Authors == "" {
 				article.Authors = "No authors specified"
 			}
+
 			article.titleLower = strings.ToLower(article.Title)
 
 		case "blogsummary":
