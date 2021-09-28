@@ -27,7 +27,9 @@ func (b *botState) handleInfo(e *gateway.InteractionCreateEvent, _ *discord.Comm
 	fmt.Fprintf(buf, "Uptime: <t:%d:R>\n", started)
 	fmt.Fprintf(buf, "Memory: %s / %s (alloc / sys)\n", humanize.Bytes(stats.Alloc), humanize.Bytes(stats.Sys))
 	fmt.Fprintf(buf, "Source: %s\n", "[link](https://github.com/DiscordGophers/dr-docso)")
-	fmt.Fprintf(buf, "Concurrent Tasks: %s\n", humanize.Comma(int64(runtime.NumGoroutine())))
+	fmt.Fprintf(buf, "Concurrent Tasks: %s\n\n", humanize.Comma(int64(runtime.NumGoroutine())))
+	fmt.Fprintf(buf, "Maintained by: %s\n", "[hhhapz#8936](https://github.com/hhhapz)")
+	fmt.Fprintf(buf, "Hosted on %s by %s!\n", "[TransIP](https://www.transip.nl/)", "[Sgt_Tailor#0124](https://github.com/svenwiltink)")
 
 	b.state.RespondInteraction(e.ID, e.Token, api.InteractionResponse{
 		Type: api.MessageInteractionWithSource,
