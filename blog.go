@@ -240,8 +240,9 @@ func (b *botState) BlogDisplay(e *gateway.InteractionCreateEvent, url string) {
 		},
 	})
 	b.state.CreateInteractionFollowup(e.AppID, e.Token, api.InteractionResponseData{
-		Content: option.NewNullableString(e.User.Tag() + ":"),
-		Embeds:  &[]discord.Embed{article.Display()},
+		Content:         option.NewNullableString(e.User.Mention() + ":"),
+		Embeds:          &[]discord.Embed{article.Display()},
+		AllowedMentions: &api.AllowedMentions{},
 	})
 }
 
