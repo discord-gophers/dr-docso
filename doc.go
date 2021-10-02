@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"path"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -336,6 +337,126 @@ func (b *botState) handleDocsComponent(e *gateway.InteractionCreateEvent, data *
 	b.state.RespondInteraction(e.ID, e.Token, resp)
 }
 
+func (b *botState) handleDocsComplete(e *gateway.InteractionCreateEvent, d *discord.AutocompleteInteractionData) {
+	values := map[string]string{}
+	var focused string
+	for _, opt := range d.Options {
+		values[opt.Name] = opt.Value
+		if opt.Focused {
+			focused = opt.Name
+		}
+	}
+
+	opts := []api.AutocompleteChoice{}
+	add := func(name, value string) {
+		opts = append(opts, api.AutocompleteChoice{
+			Name:  name,
+			Value: value,
+		})
+	}
+
+	query, item := values["query"], values["item"]
+	if focused != "query" {
+		switch {
+		case query == "":
+			add(item, item)
+		default:
+			module, parts := parseQuery(query + " " + item)
+
+			var pkg doc.Package
+			var ok bool
+
+			// apply aliasing
+			{
+				if complete, ok := stdlibAliases[module]; ok {
+					module = complete
+				}
+				split := strings.Split(module, "/")
+				if full, ok := b.cfg.Aliases[split[0]]; ok {
+					split[0] = full
+				}
+				module = strings.Join(split, "/")
+
+				ok = ok || stdlib[module]
+				if strings.HasPrefix(module, "x/") {
+					module = "golang.org/" + module
+				}
+			}
+
+			if ok {
+				pkg, _ = b.searcher.Search(context.Background(), module)
+			} else {
+				b.searcher.WithCache(func(cache map[string]*doc.CachedPackage) {
+					if cpkg, ok := cache[module]; ok {
+						pkg = cpkg.Package
+					}
+				})
+			}
+
+			ranks := packageOptions(parts, pkg)
+			sort.Sort(ranks)
+
+			if len(ranks) > 25 {
+				ranks = ranks[:25]
+			}
+			for _, item := range ranks {
+				add(item.Target, item.Target)
+			}
+		}
+	} else {
+		switch query {
+		case "":
+			add("help", "help")
+			add("alias", "alias")
+		case "ali", "alias", "aliases":
+			add("alias", "alias")
+		case "hel", "help", "info", "?":
+			add("help", "help")
+		}
+	}
+
+	if len(opts) != 0 {
+		b.state.RespondInteraction(e.ID, e.Token, api.InteractionResponse{
+			Type: api.AutocompleteResult,
+			Data: &api.InteractionResponseData{
+				Choices: &opts,
+			},
+		})
+		return
+	}
+
+	var split []string
+	var module string
+
+	if strings.Contains(query, "@") {
+		split = strings.Split(query, " ")
+		module = split[0]
+	} else {
+		query = strings.ReplaceAll(query, " ", ".")
+		dir, base := path.Split(strings.ToLower(query))
+		split = strings.Split(base, ".")
+		module = dir + split[0]
+	}
+	split = split[1:]
+
+	ranks := b.packageCache(module)
+	sort.Sort(ranks)
+
+	for _, item := range ranks {
+		add(item.Target, item.Target)
+	}
+
+	if len(opts) > 25 {
+		opts = opts[:25]
+	}
+	b.state.RespondInteraction(e.ID, e.Token, api.InteractionResponse{
+		Type: api.AutocompleteResult,
+		Data: &api.InteractionResponseData{
+			Choices: &opts,
+		},
+	})
+}
+
 func (b *botState) docs(user discord.User, query string, full bool) (discord.Embed, bool) {
 	module, parts := parseQuery(query)
 	split := strings.Split(module, "/")
@@ -427,16 +548,16 @@ func buttonComponent(id string) *discord.ButtonComponent {
 	}
 }
 
-func parseQuery(module string) (string, []string) {
+func parseQuery(query string) (string, []string) {
 	var split []string
 	var first string
 
-	if strings.Contains(module, "@") {
-		split = strings.Split(module, " ")
+	if strings.Contains(query, "@") {
+		split = strings.Split(query, " ")
 		first = split[0]
 	} else {
-		module = strings.ReplaceAll(module, " ", ".")
-		dir, base := path.Split(strings.ToLower(module))
+		query = strings.ReplaceAll(query, " ", ".")
+		dir, base := path.Split(strings.ToLower(query))
 		split = strings.Split(base, ".")
 		first = dir + split[0]
 	}
@@ -444,142 +565,9 @@ func parseQuery(module string) (string, []string) {
 	if strings.HasPrefix(first, "x/") {
 		first = "golang.org/" + first
 	}
-	if complete, ok := stdlibPackages[first]; ok {
+	if complete, ok := stdlibAliases[first]; ok {
 		first = complete
 	}
 
 	return first, split[1:]
-}
-
-var stdlibPackages = map[string]string{
-	"tar": "archive/tar",
-	"zip": "archive/zip",
-
-	"bzip2": "compress/bzip2",
-	"flate": "compress/flate",
-	"gzip":  "compress/gzip",
-	"lzw":   "compress/lzw",
-	"zlib":  "compress/zlib",
-
-	"heap": "container/heap",
-	"list": "container/list",
-	"ring": "container/ring",
-
-	"aes":      "crypto/aes",
-	"cipher":   "crypto/cipher",
-	"des":      "crypto/des",
-	"dsa":      "crypto/dsa",
-	"ecdsa":    "crypto/ecdsa",
-	"ed25519":  "crypto/ed25519",
-	"elliptic": "crypto/elliptic",
-	"hmac":     "crypto/hmac",
-	"md5":      "crypto/md5",
-	"rc4":      "crypto/rc4",
-	"rsa":      "crypto/rsa",
-	"sha1":     "crypto/sha1",
-	"sha256":   "crypto/sha256",
-	"sha512":   "crypto/sha512",
-	"subtle":   "crypto/subtle",
-	"tls":      "crypto/tls",
-	"x509":     "crypto/x509",
-	"pkix":     "crypto/x509/pkix",
-
-	"sql": "database/sql",
-
-	"dwarf":    "debug/dwarf",
-	"elf":      "debug/elf",
-	"gosym":    "debug/gosym",
-	"macho":    "debug/macho",
-	"pe":       "debug/pe",
-	"plan9obj": "debug/plan9obj",
-
-	"ascii85": "encoding/ascii85",
-	"asn1":    "encoding/asn1",
-	"base32":  "encoding/base32",
-	"base64":  "encoding/base64",
-	"binary":  "encoding/binary",
-	"csv":     "encoding/csv",
-	"gob":     "encoding/gob",
-	"hex":     "encoding/hex",
-	"json":    "encoding/json",
-	"pem":     "encoding/pem",
-	"xml":     "encoding/xml",
-
-	"ast":           "go/ast",
-	"build":         "go/build",
-	"constraint":    "go/build/constraint",
-	"constant":      "go/constant",
-	"docformat":     "go/docformat",
-	"importer":      "go/importer",
-	"parserprinter": "go/parserprinter",
-	"scanner":       "go/scanner",
-	"token":         "go/token",
-	"types":         "go/types",
-
-	"adler32": "hash/adler32",
-	"crc32":   "hash/crc32",
-	"crc64":   "hash/crc64",
-	"fnv":     "hash/fnv",
-	"maphash": "hash/maphash",
-
-	"color":   "image/color",
-	"draw":    "image/draw",
-	"gif":     "image/gif",
-	"jpeg":    "image/jpeg",
-	"parsing": "image/parsing",
-
-	"suffixarray": "index/suffixarray",
-
-	"fs":     "io/fs",
-	"ioutil": "io/ioutil",
-
-	"big":   "math/big",
-	"bits":  "math/bits",
-	"cmplx": "math/cmplx",
-
-	"multipart":       "mime/multipart",
-	"quotedprintable": "mime/quotedprintable",
-
-	"http":      "net/http",
-	"cgi":       "net/http/cgi",
-	"cookiejar": "net/http/cookiejar",
-	"fcgi":      "net/http/fcgi",
-	"httptest":  "net/http/httptest",
-	"httptrace": "net/http/httptrace",
-	"httputil":  "net/http/httputil",
-	"mail":      "net/mail",
-	"rpc":       "net/rpc",
-	"jsonrpc":   "net/rpc/jsonrpc",
-	"smtp":      "net/smtp",
-	"textproto": "net/textproto",
-	"url":       "net/url",
-
-	"exec":   "os/exec",
-	"signal": "os/signal",
-	"user":   "os/user",
-
-	"filepath": "path/filepath",
-
-	"syntax": "regexp/syntax",
-
-	"cgo":     "runtime/cgo",
-	"metrics": "runtime/metrics",
-	"msan":    "runtime/msan",
-	"race":    "runtime/race",
-	"trace":   "runtime/trace",
-
-	"js": "syscall/js",
-
-	"fstest": "testing/fstest",
-	"iotest": "testing/iotest",
-	"quick":  "testing/quick",
-
-	"tabwriter": "text/tabwriter",
-
-	"parse": "text/template/parse",
-
-	"tzdata": "time/tzdata",
-
-	"utf16": "unicode/utf16",
-	"utf8":  "unicode/utf8",
 }

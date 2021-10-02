@@ -34,6 +34,11 @@ func (b *botState) OnCommand(e *gateway.InteractionCreateEvent) {
 	}
 
 	switch data := e.Data.(type) {
+	case *discord.AutocompleteInteractionData:
+		switch data.Name {
+		case "docs":
+			b.handleDocsComplete(e, data)
+		}
 	case *discord.CommandInteractionData:
 		switch data.Name {
 		case "blog":
@@ -113,7 +118,7 @@ func loadCommands(s *state.State, me discord.UserID, cfg configuration) error {
 	registeredMap := map[string]bool{}
 	if !update {
 		for _, c := range registered {
-			registeredMap[c.Name] = true
+			// registeredMap[c.Name] = true  TODO: change back
 			log.Println("Registered command:", c.Name)
 		}
 	}
@@ -170,10 +175,18 @@ var commands = []api.CreateCommandData{
 		Description: "Search Go Package Docs",
 		Options: []discord.CommandOption{
 			{
-				Name:        "query",
-				Description: "Search query (i.e strings.Split)",
-				Type:        discord.StringOption,
-				Required:    true,
+				Name:         "query",
+				Description:  "Search query (i.e strings.Split)",
+				Type:         discord.StringOption,
+				Autocomplete: true,
+				Required:     true,
+			},
+			{
+				Name:         "item",
+				Description:  "Search item in module",
+				Type:         discord.StringOption,
+				Autocomplete: true,
+				Required:     true,
 			},
 		},
 	},

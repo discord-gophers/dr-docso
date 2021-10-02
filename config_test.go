@@ -2,9 +2,10 @@ package main
 
 import (
 	"encoding/json"
+	"testing"
+
 	"github.com/diamondburned/arikawa/v3/discord"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestSnowflakeLookup_MarshalJSON(t *testing.T) {
