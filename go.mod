@@ -2,13 +2,15 @@ module github.com/DiscordGophers/dr-docso
 
 go 1.17
 
+replace github.com/diamondburned/arikawa/v3 => github.com/hhhapz/arikawa/v3 v3.0.0-20211001184817-609452963a71
+
 require (
 	github.com/PuerkitoBio/goquery v1.7.1
 	github.com/diamondburned/arikawa/v3 v3.0.0-rc.2
 	github.com/dustin/go-humanize v1.0.0
 	github.com/hhhapz/doc v0.4.1
 	github.com/stretchr/testify v1.7.0
-	golang.org/x/net v0.0.0-20210928044308-7d9f5e0b762b
+	golang.org/x/net v0.0.0-20210929193557-e81a3d93ecf6
 )
 
 require (
