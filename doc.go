@@ -39,6 +39,14 @@ var (
 )
 
 func (b *botState) gcInteractionData() {
+	// Load all aliases into cache
+	go func() {
+		for _, v := range b.cfg.Aliases {
+			b.searcher.Search(context.Background(), v)
+			time.Sleep(time.Second * 3)
+		}
+	}()
+
 	mapTicker := time.NewTicker(time.Minute * 5)
 	cacheTicker := time.NewTicker(time.Hour * 24)
 	for {

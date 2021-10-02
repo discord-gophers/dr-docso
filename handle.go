@@ -118,7 +118,7 @@ func loadCommands(s *state.State, me discord.UserID, cfg configuration) error {
 	registeredMap := map[string]bool{}
 	if !update {
 		for _, c := range registered {
-			// registeredMap[c.Name] = true  TODO: change back
+			registeredMap[c.Name] = true
 			log.Println("Registered command:", c.Name)
 		}
 	}
