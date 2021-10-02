@@ -368,6 +368,8 @@ func (b *botState) handleDocsComplete(e *gateway.InteractionCreateEvent, d *disc
 		switch {
 		case query == "":
 			add(item, item)
+		case query == "help", query == "alias":
+			add(query, query)
 		default:
 			module, parts := parseQuery(query + " " + item)
 
