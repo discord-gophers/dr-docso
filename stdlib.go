@@ -21,13 +21,21 @@ func packageOptions(parts []string, pkg doc.Package) fuzzy.Ranks {
 	}
 
 	joined := strings.Join(parts, ".")
+
 	ranks := fuzzy.RankFindFold(joined, opts)
-	if len(ranks) == 0 {
+	switch {
+	case joined == "":
+		ranks = append([]fuzzy.Rank{
+			{
+				Source: "<package info>",
+				Target: "<pkginfo>",
+			},
+		}, ranks...)
+
+	case len(ranks) == 0:
 		ranks = append(ranks, fuzzy.Rank{
-			Source:        joined,
-			Target:        joined,
-			Distance:      0,
-			OriginalIndex: -1,
+			Source: joined,
+			Target: joined,
 		})
 	}
 	return ranks
@@ -58,6 +66,9 @@ func (b *botState) packageCache(query string) fuzzy.Ranks {
 
 	vals := make([]string, 0, len(packages))
 	for _, val := range packages {
+		if strings.Contains(val, "examples") {
+			continue
+		}
 		vals = append(vals, val)
 	}
 

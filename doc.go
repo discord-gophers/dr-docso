@@ -90,14 +90,20 @@ func (b *botState) handleDocs(e *gateway.InteractionCreateEvent, d *discord.Comm
 		return
 	}
 
-	// only arg and required, always present
-	query := d.Options[0].String()
+	var first, query string
+
+	first = d.Options[0].String()
+	query = first + " " + d.Options[1].String()
+
+	if item := d.Options[1].String(); item == "<pkginfo>" {
+		query = first
+	}
 
 	log.Printf("%s used docs(%q)", e.User.Tag(), query)
 
 	var embed discord.Embed
 	var internal, more bool
-	switch query {
+	switch first {
 	case "?", "help", "usage":
 		embed, internal = helpEmbed(), true
 	case "alias", "aliases":
@@ -377,10 +383,9 @@ func (b *botState) handleDocsComplete(e *gateway.InteractionCreateEvent, d *disc
 			var ok bool
 
 			// apply aliasing
-			{
-				if complete, ok := stdlibAliases[module]; ok {
-					module = complete
-				}
+			if complete, ok := stdlibAliases[module]; ok {
+				module = complete
+			} else {
 				split := strings.Split(module, "/")
 				if full, ok := b.cfg.Aliases[split[0]]; ok {
 					split[0] = full
@@ -409,6 +414,7 @@ func (b *botState) handleDocsComplete(e *gateway.InteractionCreateEvent, d *disc
 			if len(ranks) > 25 {
 				ranks = ranks[:25]
 			}
+
 			for _, item := range ranks {
 				add(item.Target, item.Target)
 			}
