@@ -16,10 +16,10 @@ import (
 	"github.com/hhhapz/doc"
 )
 
-var (
-	searchErr      = "Could not find package with the name of `%s`.\n\nTry `/docs query:help` for examples."
-	notFound       = "Could not find type or function `%s` in package `%s`.\n\nTry `/docs query:help` for examples."
-	methodNotFound = "Could not find method `%s` for type `%s` in package `%s`.\n\nTRry `/docs query:help` f`or examples."
+const (
+	searchErr      = "Could not find package with the name of `%s`."
+	notFound       = "Could not find type or function `%s` in package `%s`."
+	methodNotFound = "Could not find method `%s` for type `%s` in package `%s`."
 	notOwner       = "Only the message sender can do this."
 	cannotExpand   = "You cannot expand this embed."
 )
