@@ -251,6 +251,31 @@ var commands = []api.CreateCommandData{
 			},
 			{
 				Type:        discord.SubcommandGroupOption,
+				Name:        "cache",
+				Description: "Manage package cache",
+				Options: []discord.CommandOption{
+					{
+						Type:        discord.SubcommandOption,
+						Name:        "remove",
+						Description: "Remove cache for a specific module",
+						Options: []discord.CommandOption{
+							{
+								Type:        discord.StringOption,
+								Name:        "module",
+								Description: "Module name",
+								Required:    true,
+							},
+						},
+					},
+					{
+						Type:        discord.SubcommandOption,
+						Name:        "prune",
+						Description: "Prune package cache not used in over 24 hours",
+					},
+				},
+			},
+			{
+				Type:        discord.SubcommandGroupOption,
 				Name:        "alias",
 				Description: "Configure /docs aliases",
 				Options: []discord.CommandOption{

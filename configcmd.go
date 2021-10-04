@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"time"
 
 	"github.com/diamondburned/arikawa/v3/api"
 	"github.com/diamondburned/arikawa/v3/discord"
 	"github.com/diamondburned/arikawa/v3/gateway"
+	"github.com/hhhapz/doc"
 )
 
 func (b *botState) handleConfig(e *gateway.InteractionCreateEvent, d *discord.CommandInteractionData) {
@@ -59,6 +61,63 @@ block:
 			embed = ignoreList(b.cfg.Blacklist)
 		}
 
+	case "cache":
+		switch cmd.Name {
+		case "remove":
+			lower := strings.ToLower(cmd.Options[0].String())
+
+			var items []string
+			b.searcher.WithCache(func(cache map[string]*doc.CachedPackage) {
+				for item := range cache {
+					if strings.Contains(strings.ToLower(item), lower) {
+						delete(cache, item)
+						items = append(items, "- "+item)
+					}
+				}
+			})
+
+			list := strings.Join(items, "\n")
+			if len(list) > 4000 {
+				list = list[:3800] + "..."
+			}
+			if len(list) == 0 {
+				list = "(empty)"
+			}
+
+			embed = discord.Embed{
+				Title: "Removed packages",
+				Description: fmt.Sprintf("Removed %d Item(s):```fix\n%s```",
+					len(items), list),
+				Color: accentColor,
+			}
+
+		case "prune":
+			var items []string
+			b.searcher.WithCache(func(cache map[string]*doc.CachedPackage) {
+				for k, cp := range cache {
+					if time.Since(cp.Updated) > time.Hour*24 { // removed stuff not used in over 24 hours
+						delete(cache, k)
+						items = append(items, "- "+k)
+					}
+				}
+			})
+
+			list := strings.Join(items, "\n")
+			if len(list) > 4000 {
+				list = list[:3800] + "..."
+			}
+			if len(list) == 0 {
+				list = "(empty)"
+			}
+
+			embed = discord.Embed{
+				Title: "Pruned packages",
+				Description: fmt.Sprintf("Pruned %d Item(s):```fix\n%s```",
+					len(items), list),
+				Color: accentColor,
+			}
+		}
+
 	case "alias":
 		switch cmd.Name {
 		case "add":
@@ -104,7 +163,6 @@ block:
 		},
 	}); err != nil {
 		log.Printf("could not send interaction callback, %v", err)
-		return
 	}
 }
 

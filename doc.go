@@ -383,13 +383,15 @@ func (b *botState) handleDocsComplete(e *gateway.InteractionCreateEvent, d *disc
 			var ok bool
 
 			// apply aliasing
-			if complete, ok := stdlibAliases[module]; ok {
+			var complete string
+			if complete, ok = stdlibAliases[module]; ok {
 				module = complete
 			} else {
 				split := strings.Split(module, "/")
-				if full, ok := b.cfg.Aliases[split[0]]; ok {
-					split[0] = full
+				if complete, ok = b.cfg.Aliases[split[0]]; ok {
+					split[0] = complete
 				}
+
 				module = strings.Join(split, "/")
 
 				ok = ok || stdlib[module]
