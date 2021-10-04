@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	"log"
 	"net/http"
@@ -15,13 +14,7 @@ import (
 	"github.com/hhhapz/doc/godocs"
 )
 
-var update bool
-
 func run() error {
-	updateVar := flag.Bool("update", false, "update all commands, regardless of if they are present or not")
-	flag.Parse()
-	update = *updateVar
-
 	cfg := config()
 	if cfg.Token == "" {
 		return fmt.Errorf("no token provided")

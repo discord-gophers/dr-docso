@@ -110,23 +110,8 @@ func (b *botState) OnMessageEdit(e *gateway.MessageUpdateEvent) {
 
 func loadCommands(s *state.State, me discord.UserID, cfg configuration) error {
 	appID := discord.AppID(me)
-	registered, err := s.Commands(appID)
-	if err != nil {
-		return err
-	}
-
-	registeredMap := map[string]bool{}
-	if !update {
-		for _, c := range registered {
-			registeredMap[c.Name] = true
-			log.Println("Registered command:", c.Name)
-		}
-	}
 
 	for _, c := range commands {
-		if registeredMap[c.Name] {
-			continue
-		}
 		var cmd *discord.Command
 		var err error
 		if cmd, err = s.CreateCommand(appID, c); err != nil {
