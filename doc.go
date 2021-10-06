@@ -369,8 +369,8 @@ func (b *botState) handleDocsComplete(e *gateway.InteractionCreateEvent, d *disc
 		})
 	}
 
-	query, item := values["query"], values["item"]
-	if focused != "query" {
+	query, item := values["module"], values["item"]
+	if focused != "module" {
 		switch {
 		case query == "":
 			add(item, item)
@@ -395,8 +395,8 @@ func (b *botState) handleDocsComplete(e *gateway.InteractionCreateEvent, d *disc
 				module = strings.Join(split, "/")
 
 				ok = ok || stdlib[module]
-				if strings.HasPrefix(module, "x/") {
-					module = "golang.org/" + module
+				if strings.HasPrefix(module, "golang.org/x/") {
+					ok = true
 				}
 			}
 

@@ -160,8 +160,8 @@ var commands = []api.CreateCommandData{
 		Description: "Search Go Package Docs",
 		Options: []discord.CommandOption{
 			{
-				Name:         "query",
-				Description:  "Search query (i.e strings.Split)",
+				Name:         "module",
+				Description:  "Module name",
 				Type:         discord.StringOption,
 				Autocomplete: true,
 				Required:     true,

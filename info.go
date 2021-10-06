@@ -24,7 +24,7 @@ func (b *botState) handleInfo(e *gateway.InteractionCreateEvent, _ *discord.Comm
 	buf := &bytes.Buffer{}
 
 	fmt.Fprintf(buf, "Go: %s\n", runtime.Version())
-	fmt.Fprintf(buf, "Uptime: <t:%d:R>\n", started)
+	fmt.Fprintf(buf, "Uptime: <t:%[1]d:R> (<t:%[1]d:F>)\n", started)
 	fmt.Fprintf(buf, "Memory: %s / %s (alloc / sys)\n", humanize.Bytes(stats.Alloc), humanize.Bytes(stats.Sys))
 	fmt.Fprintf(buf, "Source: %s\n", "[link](https://github.com/DiscordGophers/dr-docso)")
 	fmt.Fprintf(buf, "Concurrent Tasks: %s\n\n", humanize.Comma(int64(runtime.NumGoroutine())))
