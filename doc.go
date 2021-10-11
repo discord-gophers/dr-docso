@@ -87,7 +87,7 @@ func (b *botState) handleDocs(e *gateway.InteractionCreateEvent, d *discord.Comm
 	first = d.Options[0].String()
 	query = first + " " + d.Options[1].String()
 
-	if item := d.Options[1].String(); item == "<pkginfo>" {
+	if item := d.Options[1].String(); item == "<pkginfo>" || item == "." {
 		query = first
 	}
 

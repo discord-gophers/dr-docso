@@ -11,7 +11,7 @@ require (
 	github.com/hhhapz/doc v0.5.1
 	github.com/lithammer/fuzzysearch v1.1.3
 	github.com/stretchr/testify v1.7.0
-	golang.org/x/net v0.0.0-20210929193557-e81a3d93ecf6
+	golang.org/x/net v0.0.0-20211008194852-3b03d305991f
 )
 
 require (
