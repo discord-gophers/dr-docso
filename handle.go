@@ -66,6 +66,8 @@ func (b *botState) OnCommand(e *gateway.InteractionCreateEvent) {
 		case "docs":
 		case "spec":
 			b.handleSpecComponent(e, data, split[1])
+		case "info":
+			b.handleInfoComponent(e, data, split[1])
 		}
 	}
 }

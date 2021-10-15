@@ -47,6 +47,57 @@ func (b *botState) handleInfo(e *gateway.InteractionCreateEvent, _ *discord.Comm
 				Description: buf.String(),
 				Color:       accentColor,
 			}},
+			Components: &[]discord.Component{
+				&discord.ActionRowComponent{
+					Components: []discord.Component{
+						&discord.ButtonComponent{
+							Label:    "Command Info",
+							CustomID: "info.help",
+							Style:    discord.SecondaryButton,
+						},
+					},
+				},
+			},
 		},
 	})
+}
+
+func (b *botState) handleInfoComponent(e *gateway.InteractionCreateEvent, data *discord.ComponentInteractionData, cmd string) {
+	switch cmd {
+	case "help":
+		b.state.RespondInteraction(e.ID, e.Token, api.InteractionResponse{
+			Type: api.MessageInteractionWithSource,
+			Data: &api.InteractionResponseData{
+				Flags: api.EphemeralResponse,
+				Embeds: &[]discord.Embed{
+					{
+						Title: fmt.Sprintf("Command Help"),
+						Fields: []discord.EmbedField{
+							{
+								Name:  "/docs",
+								Value: "Query Go package documentation.\nSee options in autocomplete.",
+							},
+							{
+								Name:  "d.docs <module> [item]",
+								Value: "Query Go package documentation.\n*Text commeand version.*",
+							},
+							{
+								Name:  "/blog <slug|query>",
+								Value: "Query [Go Blog](https://go.dev/blog) articles.",
+							},
+							{
+								Name:  "/info",
+								Value: "Bot Information.",
+							},
+							{
+								Name:  "/config",
+								Value: "Configure dr-docso.\n*(Herders only)*",
+							},
+						},
+						Color: accentColor,
+					},
+				},
+			},
+		})
+	}
 }

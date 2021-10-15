@@ -40,10 +40,8 @@ var (
 
 func (b *botState) gcInteractionData() {
 	mapTicker := time.NewTicker(time.Minute * 5)
-	cacheTicker := time.NewTicker(time.Hour * 24)
 	for {
 		select {
-
 		// gc interaction tokens
 		case <-mapTicker.C:
 			now := time.Now()
@@ -64,13 +62,6 @@ func (b *botState) gcInteractionData() {
 					Components: &[]discord.Component{},
 				})
 			}
-
-		case <-cacheTicker.C:
-			b.searcher.WithCache(func(cache map[string]*doc.CachedPackage) {
-				for k := range cache {
-					delete(cache, k)
-				}
-			})
 		}
 	}
 }

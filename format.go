@@ -47,11 +47,15 @@ func comment(c doc.Comment, initial int, full bool) (string, bool) {
 			return md, false
 		}
 
-		md, more := c[0].Markdown(), false
+		md, more := c[0].Markdown(), len(c) > 1
 		if len(md) > 500 {
-			md = md[:400] + "...\n\n*More documentation omitted*"
+			md = md[:400]
 			more = true
 		}
+		if more {
+			md += "...\n\n*More documentation omitted*"
+		}
+
 		return md, more
 	}
 
