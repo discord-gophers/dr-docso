@@ -10,7 +10,7 @@ func typdef(def string, full bool) (string, bool) {
 	split := strings.Split(def, "\n")
 
 	// Show upto 4 lines, good for single-line interfaces and the sort.
-	if len(split) < 5 {
+	if len(split) < 6 {
 		return def, false
 	}
 

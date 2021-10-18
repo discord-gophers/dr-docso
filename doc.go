@@ -470,6 +470,8 @@ func (b *botState) docs(user discord.User, query string, full bool) (discord.Emb
 		log.Printf("Package request by %s(%q) failed: %v", user.Tag(), query, err)
 		return failEmbed("Error", fmt.Sprintf(searchErr, module)), false
 	}
+	pkg.Name = pkg.URL
+	pkg.URL = strings.Join(split, "/")
 
 	switch len(parts) {
 	case 0:
