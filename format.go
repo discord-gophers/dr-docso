@@ -9,8 +9,8 @@ import (
 func typdef(def string, full bool) (string, bool) {
 	split := strings.Split(def, "\n")
 
-	// There is no more to share, this is the full declaration.
-	if len(split) == 1 {
+	// Show upto 4 lines, good for single-line interfaces and the sort.
+	if len(split) < 5 {
 		return def, false
 	}
 
@@ -48,8 +48,8 @@ func comment(c doc.Comment, initial int, full bool) (string, bool) {
 		}
 
 		md, more := c[0].Markdown(), len(c) > 1
-		if len(md) > 500 {
-			md = md[:400]
+		if len(md) > 600 {
+			md = md[:500]
 			more = true
 		}
 		if more {
