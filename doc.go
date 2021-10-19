@@ -29,6 +29,7 @@ type interactionData struct {
 	created   time.Time
 	token     string
 	userID    discord.UserID
+	channelID discord.ChannelID
 	messageID discord.MessageID
 	query     string
 }
@@ -55,6 +56,9 @@ func (b *botState) gcInteractionData() {
 				mu.Unlock()
 
 				if data.token == "" {
+					b.state.EditMessageComplex(data.channelID, data.messageID, api.EditMessageData{
+						Components: &[]discord.Component{},
+					})
 					continue
 				}
 
@@ -210,6 +214,7 @@ func (b *botState) handleDocsText(m *gateway.MessageCreateEvent, query string) {
 	}
 
 	mu.Lock()
+	interactionMap[m.ID.String()].channelID = msg.ChannelID
 	interactionMap[m.ID.String()].messageID = msg.ID
 	mu.Unlock()
 }
