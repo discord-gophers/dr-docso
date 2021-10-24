@@ -16,7 +16,7 @@ import (
 
 var started = time.Now().Unix()
 
-func (b *botState) handleInfo(e *gateway.InteractionCreateEvent, _ *discord.CommandInteractionData) {
+func (b *botState) handleInfo(e *gateway.InteractionCreateEvent, _ *discord.CommandInteraction) {
 	log.Printf("%s used info", e.User.Tag())
 
 	stats := runtime.MemStats{}
@@ -47,14 +47,12 @@ func (b *botState) handleInfo(e *gateway.InteractionCreateEvent, _ *discord.Comm
 				Description: buf.String(),
 				Color:       accentColor,
 			}},
-			Components: &[]discord.Component{
+			Components: &discord.ContainerComponents{
 				&discord.ActionRowComponent{
-					Components: []discord.Component{
-						&discord.ButtonComponent{
-							Label:    "Command Info",
-							CustomID: "info.help",
-							Style:    discord.SecondaryButton,
-						},
+					&discord.ButtonComponent{
+						Label:    "Command Info",
+						CustomID: "info.help",
+						Style:    discord.SecondaryButtonStyle(),
 					},
 				},
 			},
@@ -62,7 +60,7 @@ func (b *botState) handleInfo(e *gateway.InteractionCreateEvent, _ *discord.Comm
 	})
 }
 
-func (b *botState) handleInfoComponent(e *gateway.InteractionCreateEvent, data *discord.ComponentInteractionData, cmd string) {
+func (b *botState) handleInfoComponent(e *gateway.InteractionCreateEvent, data discord.ComponentInteraction, cmd string) {
 	switch cmd {
 	case "help":
 		b.state.RespondInteraction(e.ID, e.Token, api.InteractionResponse{

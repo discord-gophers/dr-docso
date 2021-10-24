@@ -10,7 +10,7 @@ import (
 	"github.com/diamondburned/arikawa/v3/gateway"
 )
 
-func (b *botState) handleSpec(e *gateway.InteractionCreateEvent, d *discord.CommandInteractionData) {
+func (b *botState) handleSpec(e *gateway.InteractionCreateEvent, d *discord.CommandInteraction) {
 	// only arg and required, always present
 	query := d.Options[0].String()
 
@@ -85,10 +85,10 @@ func (b *botState) handleSpec(e *gateway.InteractionCreateEvent, d *discord.Comm
 	})
 }
 
-func (b *botState) handleSpecComponent(e *gateway.InteractionCreateEvent, data *discord.ComponentInteractionData, cmd string) {
+func (b *botState) handleSpecComponent(e *gateway.InteractionCreateEvent, data discord.ComponentInteraction, cmd string) {
 	switch cmd {
 	case "toc":
-		opt := data.Values[0]
+		opt := data.(*discord.SelectInteraction).Values[0]
 
 		if opt == "back" {
 			b.state.RespondInteraction(e.ID, e.Token, api.InteractionResponse{
@@ -103,7 +103,7 @@ func (b *botState) handleSpecComponent(e *gateway.InteractionCreateEvent, data *
 
 		options, ok := spec.Subcomponents[opt]
 		if !ok {
-			options = []discord.SelectComponentOption{spec.GoBack}
+			options = []discord.SelectOption{spec.GoBack}
 		}
 
 		err := b.state.RespondInteraction(e.ID, e.Token, api.InteractionResponse{
@@ -117,14 +117,12 @@ func (b *botState) handleSpecComponent(e *gateway.InteractionCreateEvent, data *
 						Color:       accentColor,
 					},
 				},
-				Components: &[]discord.Component{
+				Components: &discord.ContainerComponents{
 					&discord.ActionRowComponent{
-						Components: []discord.Component{
-							&discord.SelectComponent{
-								CustomID:    "spec.toc",
-								Placeholder: "View Subheadings",
-								Options:     options,
-							},
+						&discord.SelectComponent{
+							CustomID:    "spec.toc",
+							Placeholder: "View Subheadings",
+							Options:     options,
 						},
 					},
 				},

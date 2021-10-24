@@ -39,7 +39,7 @@ func (b *botState) updateArticles() {
 	}
 }
 
-func (b *botState) handleBlog(e *gateway.InteractionCreateEvent, d *discord.CommandInteractionData) {
+func (b *botState) handleBlog(e *gateway.InteractionCreateEvent, d *discord.CommandInteraction) {
 	// only arg and required, always present
 	query := d.Options[0].String()
 
@@ -97,7 +97,7 @@ func (b *botState) handleBlog(e *gateway.InteractionCreateEvent, d *discord.Comm
 		return
 	}
 
-	comps := make([]discord.Component, 1)
+	comps := make(discord.ContainerComponents, 1, 2)
 	if total > 5 {
 		opts = opts[:5]
 		fields = fields[:5]
@@ -105,12 +105,10 @@ func (b *botState) handleBlog(e *gateway.InteractionCreateEvent, d *discord.Comm
 	}
 
 	comps[0] = &discord.ActionRowComponent{
-		Components: []discord.Component{
-			&discord.SelectComponent{
-				CustomID:    "blog.display",
-				Options:     opts,
-				Placeholder: "Display Blog Post",
-			},
+		&discord.SelectComponent{
+			CustomID:    "blog.display",
+			Options:     opts,
+			Placeholder: "Display Blog Post",
 		},
 	}
 
@@ -139,10 +137,10 @@ func (b *botState) handleBlog(e *gateway.InteractionCreateEvent, d *discord.Comm
 	})
 }
 
-func (b *botState) handleBlogComponent(e *gateway.InteractionCreateEvent, data *discord.ComponentInteractionData, cmd string) {
+func (b *botState) handleBlogComponent(e *gateway.InteractionCreateEvent, data discord.ComponentInteraction, cmd string) {
 	switch cmd {
 	case "display":
-		b.BlogDisplay(e, data.Values[0])
+		b.BlogDisplay(e, data.(*discord.SelectInteraction).Values[0])
 		return
 	}
 
@@ -181,18 +179,14 @@ func (b *botState) handleBlogComponent(e *gateway.InteractionCreateEvent, data *
 		opts = opts[(cur-1)*5:]
 	}
 
-	comps := []discord.Component{
-		&discord.ActionRowComponent{
-			Components: []discord.Component{
-				&discord.SelectComponent{
-					CustomID:    "blog.display",
-					Options:     opts,
-					Placeholder: "Display Blog Post",
-				},
-			},
+	comps := discord.Components(
+		&discord.SelectComponent{
+			CustomID:    "blog.display",
+			Options:     opts,
+			Placeholder: "Display Blog Post",
 		},
 		paginateButtons(query),
-	}
+	)
 
 	b.state.RespondInteraction(e.ID, e.Token, api.InteractionResponse{
 		Type: api.UpdateMessage,
@@ -236,7 +230,7 @@ func (b *botState) BlogDisplay(e *gateway.InteractionCreateEvent, url string) {
 	b.state.RespondInteraction(e.ID, e.Token, api.InteractionResponse{
 		Type: api.UpdateMessage,
 		Data: &api.InteractionResponseData{
-			Components: &[]discord.Component{},
+			Components: &discord.ContainerComponents{},
 		},
 	})
 	b.state.CreateInteractionFollowup(e.AppID, e.Token, api.InteractionResponseData{
@@ -246,14 +240,14 @@ func (b *botState) BlogDisplay(e *gateway.InteractionCreateEvent, url string) {
 	})
 }
 
-func articleFields(articles []blog.Article) (fields []discord.EmbedField, opts []discord.SelectComponentOption) {
+func articleFields(articles []blog.Article) (fields []discord.EmbedField, opts []discord.SelectOption) {
 	for _, a := range articles {
 		fields = append(fields, discord.EmbedField{
 			Name:  fmt.Sprintf("%s, %s", a.Title, a.Date),
 			Value: fmt.Sprintf("*%s*\n%s\n%s", a.Authors, a.Summary, a.URL),
 		})
 
-		opts = append(opts, discord.SelectComponentOption{
+		opts = append(opts, discord.SelectOption{
 			Label:       a.Title,
 			Value:       a.URL,
 			Description: a.Authors,
@@ -264,19 +258,17 @@ func articleFields(articles []blog.Article) (fields []discord.EmbedField, opts [
 
 func paginateButtons(query string) *discord.ActionRowComponent {
 	return &discord.ActionRowComponent{
-		Components: []discord.Component{
-			&discord.ButtonComponent{
-				Label:    "Prev Page",
-				CustomID: "blog.prev." + query,
-				Style:    discord.SecondaryButton,
-				Emoji:    &discord.ButtonEmoji{Name: "⬅️"},
-			},
-			&discord.ButtonComponent{
-				Label:    "Next Page",
-				CustomID: "blog.next." + query,
-				Style:    discord.SecondaryButton,
-				Emoji:    &discord.ButtonEmoji{Name: "➡️"},
-			},
+		&discord.ButtonComponent{
+			Label:    "Prev Page",
+			CustomID: discord.ComponentID("blog.prev." + query),
+			Style:    discord.SecondaryButtonStyle(),
+			Emoji:    &discord.ComponentEmoji{Name: "⬅️"},
+		},
+		&discord.ButtonComponent{
+			Label:    "Next Page",
+			CustomID: discord.ComponentID("blog.next." + query),
+			Style:    discord.SecondaryButtonStyle(),
+			Emoji:    &discord.ComponentEmoji{Name: "➡️"},
 		},
 	}
 }

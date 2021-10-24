@@ -215,15 +215,15 @@ var (
 	Cache Spec
 
 	TOC           *api.InteractionResponseData
-	Subcomponents = map[string][]discord.SelectComponentOption{}
+	Subcomponents = map[string][]discord.SelectOption{}
 )
 
 var (
-	tocOptions []discord.SelectComponentOption
-	GoBack     = discord.SelectComponentOption{
+	tocOptions []discord.SelectOption
+	GoBack     = discord.SelectOption{
 		Label: "Go Back",
 		Value: "back",
-		Emoji: &discord.ButtonEmoji{Name: "↩️"},
+		Emoji: &discord.ComponentEmoji{Name: "↩️"},
 	}
 )
 
@@ -235,7 +235,7 @@ func init() {
 	}
 	for i, node := range Cache.Nodes {
 		prefix := strconv.Itoa(i+1) + ". "
-		tocOptions = append(tocOptions, discord.SelectComponentOption{
+		tocOptions = append(tocOptions, discord.SelectOption{
 			Label: prefix + node.Heading,
 			Value: node.Heading,
 		})
@@ -244,7 +244,7 @@ func init() {
 
 		for i, sub := range node.Nodes {
 			prefix := strconv.Itoa(i+1) + ". "
-			Subcomponents[node.Heading] = append(Subcomponents[node.Heading], discord.SelectComponentOption{
+			Subcomponents[node.Heading] = append(Subcomponents[node.Heading], discord.SelectOption{
 				Label: prefix + sub.Heading,
 				Value: sub.Heading,
 			})
@@ -264,42 +264,34 @@ Search for a full heading to view full heading contents.
 /spec query:packages`,
 			Color: 0x00ADD8,
 		}},
-		Components: &[]discord.Component{
-			&discord.ActionRowComponent{
-				Components: []discord.Component{
-					&discord.SelectComponent{
-						CustomID:    "spec.toc",
-						Placeholder: "View Headings",
-						Options:     tocOptions,
-					},
-				},
+		Components: discord.ComponentsPtr(
+			&discord.SelectComponent{
+				CustomID:    "spec.toc",
+				Placeholder: "View Headings",
+				Options:     tocOptions,
 			},
-		},
+		),
 	}
 }
 
-func NodesSelect(nodes []*Node) *[]discord.Component {
-	var options []discord.SelectComponentOption
+func NodesSelect(nodes []*Node) *discord.ContainerComponents {
+	var options []discord.SelectOption
 
 	options = append(options, GoBack)
 
 	for i, node := range nodes {
 		prefix := strconv.Itoa(i+1) + ". "
-		options = append(options, discord.SelectComponentOption{
+		options = append(options, discord.SelectOption{
 			Label: prefix + node.Heading,
 			Value: node.Heading,
 		})
 	}
 
-	return &[]discord.Component{
-		&discord.ActionRowComponent{
-			Components: []discord.Component{
-				&discord.SelectComponent{
-					Placeholder: "Select",
-					CustomID:    "spec.toc",
-					Options:     options,
-				},
-			},
+	return discord.ComponentsPtr(
+		&discord.SelectComponent{
+			Placeholder: "Select",
+			CustomID:    "spec.toc",
+			Options:     options,
 		},
-	}
+	)
 }

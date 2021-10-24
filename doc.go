@@ -57,20 +57,20 @@ func (b *botState) gcInteractionData() {
 
 				if data.token == "" {
 					b.state.EditMessageComplex(data.channelID, data.messageID, api.EditMessageData{
-						Components: &[]discord.Component{},
+						Components: &discord.ContainerComponents{},
 					})
 					continue
 				}
 
 				b.state.EditInteractionResponse(b.appID, data.token, api.EditInteractionResponseData{
-					Components: &[]discord.Component{},
+					Components: &discord.ContainerComponents{},
 				})
 			}
 		}
 	}
 }
 
-func (b *botState) handleDocs(e *gateway.InteractionCreateEvent, d *discord.CommandInteractionData) {
+func (b *botState) handleDocs(e *gateway.InteractionCreateEvent, d *discord.CommandInteraction) {
 	data := api.InteractionResponse{Type: api.DeferredMessageInteractionWithSource}
 	if err := b.state.RespondInteraction(e.ID, e.Token, data); err != nil {
 		log.Println(fmt.Errorf("could not send interaction callback, %v", err))
@@ -127,17 +127,15 @@ func (b *botState) handleDocs(e *gateway.InteractionCreateEvent, d *discord.Comm
 	// If more is true, there is more content that was omitted in the embed.
 	// If more is false, there is no more content, and the expand option
 	// becomes redundant.
-	var component discord.Component = selectComponent(e.ID.String(), false)
+	var component discord.InteractiveComponent = selectComponent(e.ID.String(), false)
 	if !more {
 		component = buttonComponent(e.ID.String())
 	}
 
 	if _, err := b.state.EditInteractionResponse(e.AppID, e.Token, api.EditInteractionResponseData{
 		Embeds: &[]discord.Embed{embed},
-		Components: &[]discord.Component{
-			&discord.ActionRowComponent{
-				Components: []discord.Component{component},
-			},
+		Components: &discord.ContainerComponents{
+			&discord.ActionRowComponent{component},
 		},
 	}); err != nil {
 		log.Printf("could not send interaction callback, %v", err)
@@ -169,7 +167,7 @@ func (b *botState) handleDocsText(m *gateway.MessageCreateEvent, query string) {
 		return
 	}
 
-	var component discord.Component = selectComponent(m.ID.String(), false)
+	var component discord.InteractiveComponent = selectComponent(m.ID.String(), false)
 	if !more {
 		component = buttonComponent(m.ID.String())
 	}
@@ -182,10 +180,8 @@ func (b *botState) handleDocsText(m *gateway.MessageCreateEvent, query string) {
 
 		b.state.EditMessageComplex(m.ChannelID, data.messageID, api.EditMessageData{
 			Embeds: &[]discord.Embed{embed},
-			Components: &[]discord.Component{
-				&discord.ActionRowComponent{
-					Components: []discord.Component{component},
-				},
+			Components: &discord.ContainerComponents{
+				&discord.ActionRowComponent{component},
 			},
 		})
 		return
@@ -201,10 +197,8 @@ func (b *botState) handleDocsText(m *gateway.MessageCreateEvent, query string) {
 	mu.Unlock()
 
 	msg, err := b.state.SendMessageComplex(m.ChannelID, api.SendMessageData{
-		Components: []discord.Component{
-			&discord.ActionRowComponent{
-				Components: []discord.Component{component},
-			},
+		Components: discord.ContainerComponents{
+			&discord.ActionRowComponent{component},
 		},
 		Embeds: []discord.Embed{embed},
 	})
@@ -221,7 +215,7 @@ func (b *botState) handleDocsText(m *gateway.MessageCreateEvent, query string) {
 
 func (b *botState) handleDocsComponent(e *gateway.InteractionCreateEvent, data *interactionData) {
 	var embed discord.Embed
-	var components *[]discord.Component
+	var components *discord.ContainerComponents
 
 	// if e.Member is nil, all operations should be allowed
 	hasRole := e.Member == nil
@@ -249,11 +243,9 @@ func (b *botState) handleDocsComponent(e *gateway.InteractionCreateEvent, data *
 		return true
 	}
 
-	cid := e.Data.(*discord.ComponentInteractionData)
-
 	action := "hide"
-	if len(cid.Values) != 0 {
-		action = cid.Values[0]
+	if selects, ok := e.Data.(*discord.SelectInteraction); ok && len(selects.Values) > 0 {
+		action = selects.Values[0]
 	}
 
 	log.Printf("%s used docs component(%q)", e.User.Tag(), action)
@@ -261,9 +253,9 @@ func (b *botState) handleDocsComponent(e *gateway.InteractionCreateEvent, data *
 	switch action {
 	case "minimize":
 		embed, _ = b.docs(*e.User, data.query, false)
-		components = &[]discord.Component{
+		components = &discord.ContainerComponents{
 			&discord.ActionRowComponent{
-				Components: []discord.Component{selectComponent(data.id, false)},
+				selectComponent(data.id, false),
 			},
 		}
 
@@ -272,9 +264,9 @@ func (b *botState) handleDocsComponent(e *gateway.InteractionCreateEvent, data *
 	// If not privileged, send ephemeral instead.
 	case "expand.all":
 		embed, _ = b.docs(*e.User, data.query, true)
-		components = &[]discord.Component{
+		components = &discord.ContainerComponents{
 			&discord.ActionRowComponent{
-				Components: []discord.Component{selectComponent(data.id, true)},
+				selectComponent(data.id, true),
 			},
 		}
 
@@ -284,9 +276,9 @@ func (b *botState) handleDocsComponent(e *gateway.InteractionCreateEvent, data *
 
 	case "expand":
 		embed, _ = b.docs(*e.User, data.query, true)
-		components = &[]discord.Component{
+		components = &discord.ContainerComponents{
 			&discord.ActionRowComponent{
-				Components: []discord.Component{selectComponent(data.id, true)},
+				selectComponent(data.id, true),
 			},
 		}
 
@@ -300,7 +292,7 @@ func (b *botState) handleDocsComponent(e *gateway.InteractionCreateEvent, data *
 		return
 
 	case "hide":
-		components = &[]discord.Component{}
+		components = &discord.ContainerComponents{}
 		embed, _ = b.docs(*e.User, data.query, false)
 		embed.Description = ""
 
@@ -339,7 +331,7 @@ func (b *botState) handleDocsComponent(e *gateway.InteractionCreateEvent, data *
 	b.state.RespondInteraction(e.ID, e.Token, resp)
 }
 
-func (b *botState) handleDocsComplete(e *gateway.InteractionCreateEvent, d *discord.AutocompleteInteractionData) {
+func (b *botState) handleDocsComplete(e *gateway.InteractionCreateEvent, d *discord.AutocompleteInteraction) {
 	values := map[string]string{}
 	var focused string
 	for _, opt := range d.Options {
@@ -507,40 +499,40 @@ func (b *botState) docs(user discord.User, query string, full bool) (discord.Emb
 }
 
 func selectComponent(id string, full bool) *discord.SelectComponent {
-	expand := discord.SelectComponentOption{
+	expand := discord.SelectOption{
 		Label:       "Expand",
 		Value:       "expand",
 		Description: "Show more documentation.",
-		Emoji:       &discord.ButtonEmoji{Name: "⬇️"},
+		Emoji:       &discord.ComponentEmoji{Name: "⬇️"},
 	}
 	if full {
-		expand = discord.SelectComponentOption{
+		expand = discord.SelectOption{
 			Label:       "Minimize",
 			Value:       "minimize",
 			Description: "Show less documentation.",
-			Emoji:       &discord.ButtonEmoji{Name: "⬆️"},
+			Emoji:       &discord.ComponentEmoji{Name: "⬆️"},
 		}
 	}
 
 	sel := &discord.SelectComponent{
-		CustomID:    id,
+		CustomID:    discord.ComponentID(id),
 		Placeholder: "Actions",
-		Options: []discord.SelectComponentOption{
+		Options: []discord.SelectOption{
 			expand,
 			{
 				Label:       "Hide",
 				Value:       "hide",
 				Description: "Hide the message.",
-				Emoji:       &discord.ButtonEmoji{Name: "❌"},
+				Emoji:       &discord.ComponentEmoji{Name: "❌"},
 			},
 		},
 	}
 	if !full {
-		sel.Options = append(sel.Options, discord.SelectComponentOption{
+		sel.Options = append(sel.Options, discord.SelectOption{
 			Label:       "Expand (For everyone)",
 			Value:       "expand.all",
 			Description: "Show more documentation. (Requires permissions)",
-			Emoji:       &discord.ButtonEmoji{Name: "🌏"},
+			Emoji:       &discord.ComponentEmoji{Name: "🌏"},
 		})
 	}
 
@@ -549,10 +541,10 @@ func selectComponent(id string, full bool) *discord.SelectComponent {
 
 func buttonComponent(id string) *discord.ButtonComponent {
 	return &discord.ButtonComponent{
-		CustomID: id,
+		CustomID: discord.ComponentID(id),
 		Label:    "Hide",
-		Emoji:    &discord.ButtonEmoji{Name: "🇽"},
-		Style:    discord.SecondaryButton,
+		Emoji:    &discord.ComponentEmoji{Name: "🇽"},
+		Style:    discord.SecondaryButtonStyle(),
 	}
 }
 

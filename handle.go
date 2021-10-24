@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"strings"
@@ -10,6 +11,7 @@ import (
 	"github.com/diamondburned/arikawa/v3/discord"
 	"github.com/diamondburned/arikawa/v3/gateway"
 	"github.com/diamondburned/arikawa/v3/state"
+	"github.com/diamondburned/arikawa/v3/utils/httputil"
 	"github.com/hhhapz/doc"
 )
 
@@ -34,12 +36,12 @@ func (b *botState) OnCommand(e *gateway.InteractionCreateEvent) {
 	}
 
 	switch data := e.Data.(type) {
-	case *discord.AutocompleteInteractionData:
+	case *discord.AutocompleteInteraction:
 		switch data.Name {
 		case "docs":
 			b.handleDocsComplete(e, data)
 		}
-	case *discord.CommandInteractionData:
+	case *discord.CommandInteraction:
 		switch data.Name {
 		case "blog":
 			b.handleBlog(e, data)
@@ -53,13 +55,13 @@ func (b *botState) OnCommand(e *gateway.InteractionCreateEvent) {
 			b.handleConfig(e, data)
 		}
 
-	case *discord.ComponentInteractionData:
-		if d, ok := interactionMap[data.CustomID]; ok {
+	case discord.ComponentInteraction:
+		if d, ok := interactionMap[string(data.ID())]; ok {
 			b.handleDocsComponent(e, d)
 			return
 		}
 
-		split := strings.SplitN(data.CustomID, ".", 2)
+		split := strings.SplitN(string(data.ID()), ".", 2)
 		switch split[0] {
 		case "blog":
 			b.handleBlogComponent(e, data, split[1])
@@ -117,6 +119,10 @@ func loadCommands(s *state.State, me discord.UserID, cfg configuration) error {
 		var cmd *discord.Command
 		var err error
 		if cmd, err = s.CreateCommand(appID, c); err != nil {
+			var httperr *httputil.HTTPError
+			if errors.As(err, &httperr) {
+				log.Println(string(httperr.Body))
+			}
 			return fmt.Errorf("Could not register: %s, %w", c.Name, err)
 		}
 
@@ -149,10 +155,9 @@ var commands = []api.CreateCommandData{
 		Name:        "blog",
 		Description: "Search go.dev Blog Posts",
 		Options: []discord.CommandOption{
-			{
-				Name:        "query",
+			&discord.StringOption{
+				OptionName:  "query",
 				Description: "Search query",
-				Type:        discord.StringOption,
 				Required:    true,
 			},
 		},
@@ -161,17 +166,15 @@ var commands = []api.CreateCommandData{
 		Name:        "docs",
 		Description: "Search Go Package Docs",
 		Options: []discord.CommandOption{
-			{
-				Name:         "module",
+			&discord.StringOption{
+				OptionName:   "module",
 				Description:  "Module name",
-				Type:         discord.StringOption,
 				Autocomplete: true,
 				Required:     true,
 			},
-			{
-				Name:         "item",
+			&discord.StringOption{
+				OptionName:   "item",
 				Description:  "Search item in module",
-				Type:         discord.StringOption,
 				Autocomplete: true,
 				Required:     true,
 			},
@@ -181,10 +184,9 @@ var commands = []api.CreateCommandData{
 		Name:        "spec",
 		Description: "Search Go Specification",
 		Options: []discord.CommandOption{
-			{
-				Name:        "query",
+			&discord.StringOption{
+				OptionName:  "query",
 				Description: "Search query",
-				Type:        discord.StringOption,
 				Required:    true,
 			},
 		},
@@ -198,109 +200,92 @@ var commands = []api.CreateCommandData{
 		Description:         "Configure Dr-Docso",
 		NoDefaultPermission: true,
 		Options: []discord.CommandOption{
-			{
-				Type:        discord.SubcommandGroupOption,
-				Name:        "user",
+			&discord.SubcommandGroupOption{
+				OptionName:  "user",
 				Description: "Manage user access to Dr-Docso",
-				Options: []discord.CommandOption{
+				Subcommands: []*discord.SubcommandOption{
 					{
-						Type:        discord.SubcommandOption,
-						Name:        "ignore",
+						OptionName:  "ignore",
 						Description: "Ignore commands and actions from a user",
-						Options: []discord.CommandOption{
-							{
-								Type:        discord.UserOption,
-								Name:        "user",
+						Options: []discord.CommandOptionValue{
+							&discord.UserOption{
+								OptionName:  "user",
 								Description: "User to ignore",
 								Required:    true,
 							},
 						},
 					},
 					{
-						Type:        discord.SubcommandOption,
-						Name:        "unignore",
+						OptionName:  "unignore",
 						Description: "Stop ignoring commands and actions from a user",
-						Options: []discord.CommandOption{
-							{
-								Type:        discord.UserOption,
-								Name:        "user",
+						Options: []discord.CommandOptionValue{
+							&discord.UserOption{
+								OptionName:  "user",
 								Description: "User to unignore",
 								Required:    true,
 							},
 						},
 					},
 					{
-						Type:        discord.SubcommandOption,
-						Name:        "ignorelist",
+						OptionName:  "ignorelist",
 						Description: "List all ignored users",
 					},
 				},
 			},
-			{
-				Type:        discord.SubcommandGroupOption,
-				Name:        "cache",
+			&discord.SubcommandGroupOption{
+				OptionName:  "cache",
 				Description: "Manage package cache",
-				Options: []discord.CommandOption{
+				Subcommands: []*discord.SubcommandOption{
 					{
-						Type:        discord.SubcommandOption,
-						Name:        "remove",
+						OptionName:  "remove",
 						Description: "Remove cache for a specific module",
-						Options: []discord.CommandOption{
-							{
-								Type:        discord.StringOption,
-								Name:        "module",
+						Options: []discord.CommandOptionValue{
+							&discord.StringOption{
+								OptionName:  "module",
 								Description: "Module name",
 								Required:    true,
 							},
 						},
 					},
 					{
-						Type:        discord.SubcommandOption,
-						Name:        "prune",
+						OptionName:  "prune",
 						Description: "Prune package cache not used in over 24 hours",
 					},
 				},
 			},
-			{
-				Type:        discord.SubcommandGroupOption,
-				Name:        "alias",
+			&discord.SubcommandGroupOption{
+				OptionName:  "alias",
 				Description: "Configure /docs aliases",
-				Options: []discord.CommandOption{
+				Subcommands: []*discord.SubcommandOption{
 					{
-						Type:        discord.SubcommandOption,
-						Name:        "add",
+						OptionName:  "add",
 						Description: "Add an alias",
-						Options: []discord.CommandOption{
-							{
-								Type:        discord.StringOption,
-								Name:        "alias",
+						Options: []discord.CommandOptionValue{
+							&discord.StringOption{
+								OptionName:  "alias",
 								Description: "Alias name",
 								Required:    true,
 							},
-							{
-								Type:        discord.StringOption,
-								Name:        "url",
+							&discord.StringOption{
+								OptionName:  "url",
 								Description: "Full module name",
 								Required:    true,
 							},
 						},
 					},
 					{
-						Type:        discord.SubcommandOption,
-						Name:        "remove",
+						OptionName:  "remove",
 						Description: "Remove an alias",
-						Options: []discord.CommandOption{
-							{
-								Type:        discord.StringOption,
-								Name:        "alias",
+						Options: []discord.CommandOptionValue{
+							&discord.StringOption{
+								OptionName:  "alias",
 								Description: "Alias name",
 								Required:    true,
 							},
 						},
 					},
 					{
-						Type:        discord.SubcommandOption,
-						Name:        "list",
+						OptionName:  "list",
 						Description: "List all aliases",
 					},
 				},

@@ -5,14 +5,14 @@ github.com/andybalholm/cascadia v1.3.1 h1:nhxRkql1kdYCc8Snf7D5/D3spOX+dBgjA6u8x0
 github.com/andybalholm/cascadia v1.3.1/go.mod h1:R4bJ1UQfqADjvDa4P6HZHLh/3OxWWEqc0Sk8XGwHqvA=
 github.com/davecgh/go-spew v1.1.0 h1:ZDRjVQ15GmhC3fiQ8ni8+OwkZQO4DARzQgrnXU1Liz8=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
+github.com/diamondburned/arikawa/v3 v3.0.0-rc.2.0.20211112193836-331ec59dec98 h1:hHc/+DnZqDmgEEUzZGy/0VsViKYHCxZokS2RYGQgaP8=
+github.com/diamondburned/arikawa/v3 v3.0.0-rc.2.0.20211112193836-331ec59dec98/go.mod h1:5jBSNnp82Z/EhsKa6Wk9FsOqSxfVkNZDTDBPOj47LpY=
 github.com/dustin/go-humanize v1.0.0 h1:VSnTsYCnlFHaM2/igO1h6X3HA71jcobQuxemgkq4zYo=
 github.com/dustin/go-humanize v1.0.0/go.mod h1:HtrtbFcZ19U5GC7JDqmcUSB87Iq5E25KnS6fMYU6eOk=
 github.com/gorilla/schema v1.2.0 h1:YufUaxZYCKGFuAq3c96BOhjgd5nmXiOY9NGzF247Tsc=
 github.com/gorilla/schema v1.2.0/go.mod h1:kgLaKoK1FELgZqMAVxx/5cbj0kT+57qxUrAlIO2eleU=
 github.com/gorilla/websocket v1.4.2 h1:+/TMaTYc4QFitKJxsQ7Yye35DkWvkdLcvGKqM+x0Ufc=
 github.com/gorilla/websocket v1.4.2/go.mod h1:YR8l580nyteQvAITg2hZ9XVh4b55+EU/adAjf1fMHhE=
-github.com/hhhapz/arikawa/v3 v3.0.0-20211002040206-71dc67adcf94 h1:8IbYLZ1fCtNNxtR6+pBY4Ey5GNQGvW6HWdjLUeorBlE=
-github.com/hhhapz/arikawa/v3 v3.0.0-20211002040206-71dc67adcf94/go.mod h1:YVxwGFpW0xAIde4zy1mgsMqOYrEsS+aRIMPRB06T8kM=
 github.com/hhhapz/doc v0.5.1 h1:KZAa6/xjQoe7bYk8wGc67SIVOlcc/zSa6nZglQC4tco=
 github.com/hhhapz/doc v0.5.1/go.mod h1:V8iUs1Lhjqp/uLy67eU51uoYu+9ol0uIuqYTY+YrwiQ=
 github.com/lithammer/fuzzysearch v1.1.3 h1:+t5SevHLfi3IHcTx7LT3S+od4OcUmjzxD1xmnvtgG38=

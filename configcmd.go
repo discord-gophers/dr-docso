@@ -12,7 +12,7 @@ import (
 	"github.com/hhhapz/doc"
 )
 
-func (b *botState) handleConfig(e *gateway.InteractionCreateEvent, d *discord.CommandInteractionData) {
+func (b *botState) handleConfig(e *gateway.InteractionCreateEvent, d *discord.CommandInteraction) {
 	grp := d.Options[0]
 	cmd := grp.Options[0]
 	log.Printf("%s used config %s %s", e.User.Tag(), grp.Name, cmd.Name)
@@ -23,7 +23,7 @@ block:
 	case "user":
 		switch cmd.Name {
 		case "ignore":
-			user, _ := cmd.Options[0].Snowflake()
+			user, _ := cmd.Options[0].SnowflakeValue()
 
 			if ok := b.canIgnore(e.GuildID, user); !ok {
 				embed = failEmbed("Error", fmt.Sprintf("You cannot ignore <@!%s>.", user))
@@ -43,7 +43,7 @@ block:
 			}
 
 		case "unignore":
-			user, _ := cmd.Options[0].Snowflake()
+			user, _ := cmd.Options[0].SnowflakeValue()
 
 			if _, ok := b.cfg.Blacklist[user]; !ok {
 				embed = failEmbed("Error", fmt.Sprintf("<@!%s> is not being ignored.", user))
