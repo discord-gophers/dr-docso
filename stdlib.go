@@ -556,6 +556,11 @@ var stdlib = map[string]bool{
 
 	"x/time/rate": true,
 
+	"x/sync/errgroup":     true,
+	"x/sync/semaphore":    true,
+	"x/sync/singleflight": true,
+	"x/sync/syncmap":      true,
+
 	"x/text/cases":                       true,
 	"x/text/collate":                     true,
 	"x/text/collate/build":               true,
