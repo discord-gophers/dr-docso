@@ -42,31 +42,30 @@ var (
 func (b *botState) gcInteractionData() {
 	mapTicker := time.NewTicker(time.Minute * 5)
 	for {
-		select {
 		// gc interaction tokens
-		case <-mapTicker.C:
-			now := time.Now()
-			for _, data := range interactionMap {
-				if !now.After(data.created.Add(time.Minute * 5)) {
-					continue
-				}
+		<-mapTicker.C
+		now := time.Now()
+		for _, data := range interactionMap {
+			if !now.After(data.created.Add(time.Minute * 5)) {
+				continue
+			}
 
-				mu.Lock()
-				delete(interactionMap, data.id)
-				mu.Unlock()
+			mu.Lock()
+			delete(interactionMap, data.id)
+			mu.Unlock()
 
-				if data.token == "" {
-					b.state.EditMessageComplex(data.channelID, data.messageID, api.EditMessageData{
-						Components: &discord.ContainerComponents{},
-					})
-					continue
-				}
-
-				b.state.EditInteractionResponse(b.appID, data.token, api.EditInteractionResponseData{
+			if data.token == "" {
+				b.state.EditMessageComplex(data.channelID, data.messageID, api.EditMessageData{
 					Components: &discord.ContainerComponents{},
 				})
+				continue
 			}
+
+			b.state.EditInteractionResponse(b.appID, data.token, api.EditInteractionResponseData{
+				Components: &discord.ContainerComponents{},
+			})
 		}
+
 	}
 }
 
@@ -435,7 +434,6 @@ func (b *botState) handleDocsComplete(e *gateway.InteractionCreateEvent, d *disc
 		split = strings.Split(base, ".")
 		module = dir + split[0]
 	}
-	split = split[1:]
 
 	ranks := b.packageCache(module)
 	sort.Sort(ranks)
