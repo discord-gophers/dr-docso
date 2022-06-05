@@ -69,7 +69,7 @@ func (b *botState) handleInfoComponent(e *gateway.InteractionCreateEvent, data d
 				Flags: api.EphemeralResponse,
 				Embeds: &[]discord.Embed{
 					{
-						Title: fmt.Sprintf("Command Help"),
+						Title: "Command Help",
 						Fields: []discord.EmbedField{
 							{
 								Name:  "/docs",

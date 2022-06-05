@@ -26,16 +26,14 @@ func (b *botState) updateArticles() {
 
 	articleTicker := time.NewTicker(time.Hour * 72)
 	for {
-		select {
-		case <-articleTicker.C:
-			articles, err := blog.Articles(http.DefaultClient)
-			if err != nil {
-				log.Printf("Error querying maps: %v", err)
-				continue
-			}
-
-			b.articles = articles
+		<-articleTicker.C
+		articles, err := blog.Articles(http.DefaultClient)
+		if err != nil {
+			log.Printf("Error querying maps: %v", err)
+			continue
 		}
+
+		b.articles = articles
 	}
 }
 

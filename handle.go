@@ -123,7 +123,7 @@ func loadCommands(s *state.State, me discord.UserID, cfg configuration) error {
 			if errors.As(err, &httperr) {
 				log.Println(string(httperr.Body))
 			}
-			return fmt.Errorf("Could not register: %s, %w", c.Name, err)
+			return fmt.Errorf("could not register: %s, %w", c.Name, err)
 		}
 
 		switch c.Name {
