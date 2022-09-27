@@ -116,34 +116,13 @@ func loadCommands(s *state.State, me discord.UserID, cfg configuration) error {
 	appID := discord.AppID(me)
 
 	for _, c := range commands {
-		var cmd *discord.Command
-		var err error
-		if cmd, err = s.CreateCommand(appID, c); err != nil {
+		if _, err := s.CreateCommand(appID, c); err != nil {
 			var httperr *httputil.HTTPError
 			if errors.As(err, &httperr) {
 				log.Println(string(httperr.Body))
 			}
 			return fmt.Errorf("Could not register: %s, %w", c.Name, err)
 		}
-
-		switch c.Name {
-		case "config":
-			for guildID, opts := range cfg.Permissions.Config {
-				var perms []discord.CommandPermissions
-				for role := range opts {
-					perms = append(perms, discord.CommandPermissions{
-						ID:         role,
-						Type:       discord.RoleCommandPermission,
-						Permission: true,
-					})
-				}
-				_, err := s.EditCommandPermissions(appID, guildID, cmd.ID, perms)
-				if err != nil {
-					return err
-				}
-			}
-		}
-
 		log.Println("Created command:", c.Name)
 	}
 
