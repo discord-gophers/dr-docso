@@ -116,9 +116,7 @@ func loadCommands(s *state.State, me discord.UserID, cfg configuration) error {
 	appID := discord.AppID(me)
 
 	for _, c := range commands {
-		var cmd *discord.Command
-		var err error
-		if cmd, err = s.CreateCommand(appID, c); err != nil {
+		if _, err := s.CreateCommand(appID, c); err != nil {
 			var httperr *httputil.HTTPError
 			if errors.As(err, &httperr) {
 				log.Println(string(httperr.Body))
