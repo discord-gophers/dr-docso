@@ -125,21 +125,6 @@ func loadCommands(s *state.State, me discord.UserID, cfg configuration) error {
 			}
 			return fmt.Errorf("Could not register: %s, %w", c.Name, err)
 		}
-
-		switch c.Name {
-		case "config":
-			for guildID, opts := range cfg.Permissions.Config {
-				var perms []discord.CommandPermissions
-				for role := range opts {
-					perms = append(perms, discord.CommandPermissions{
-						ID:         role,
-						Type:       discord.RoleCommandPermission,
-						Permission: true,
-					})
-				}
-			}
-		}
-
 		log.Println("Created command:", c.Name)
 	}
 
