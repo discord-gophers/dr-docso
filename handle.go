@@ -137,10 +137,6 @@ func loadCommands(s *state.State, me discord.UserID, cfg configuration) error {
 						Permission: true,
 					})
 				}
-				_, err := s.EditCommandPermissions(appID, guildID, cmd.ID, perms)
-				if err != nil {
-					return err
-				}
 			}
 		}
 
