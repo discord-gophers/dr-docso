@@ -54,7 +54,6 @@ jobs:
         labels: ${{ steps.meta.outputs.labels }}
 
     - name: Run chart-releaser
-      if: github.event_name == 'release' && github.event.action == 'created'
       uses: helm/chart-releaser-action@v1.5.0
       env:
         CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
