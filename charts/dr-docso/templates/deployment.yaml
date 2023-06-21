@@ -31,6 +31,13 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+          - name: config-volume
+            mountPath: /docso
+      volumes:
+        - name: config-volume
+          configMap:
+            name: {{ include "dr-docso.fullname" . }}-configmap
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

@@ -11,6 +11,7 @@ COPY . .
 RUN go build
 
 FROM alpine
+WORKDIR /docso
 COPY --from=build /docso/dr-docso /bin/dr-docso
 
 ENTRYPOINT [ "/bin/dr-docso" ]
