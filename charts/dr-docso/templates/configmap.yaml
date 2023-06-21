@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "dr-docso.fullname" . }}-configmap
+data:
+  config.json: |
+    {
+        "prefix": "d.",
+        "token": "{{ .Values.botToken | required "botToken is required" }}",
+        "permissions": {{ .Values.permissions | toJson }},
+        "aliases": {
+                "arikawa": "github.com/diamondburned/arikawa/v3",
+                "chi": "github.com/go-chi/chi/v5",
+                "ctx": "context",
+                "dgo": "github.com/bwmarrin/discordgo",
+                "disgord": "github.com/andersfylling/disgord",
+                "echo": "github.com/labstack/echo/v4",
+                "fyne": "fyne.io/fyne/v2",
+                "gin": "github.com/gin-gonic/gin",
+                "uuid": "github.com/google/uuid",
+                "websocket": "github.com/gorilla/websocket"
+        },
+        "blacklist": {}
+    }
