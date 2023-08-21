@@ -178,7 +178,7 @@ func (b *botState) handleDocsText(m *gateway.MessageCreateEvent, queries []strin
 	data, ok := interactionMap[m.ID.String()]
 	if ok {
 		mu.Lock()
-		interactionMap[m.ID.String()].query = queries[1]
+		interactionMap[m.ID.String()].query = queries[0]
 		mu.Unlock()
 
 		b.state.EditMessageComplex(m.ChannelID, data.messageID, api.EditMessageData{
@@ -195,7 +195,7 @@ func (b *botState) handleDocsText(m *gateway.MessageCreateEvent, queries []strin
 		id:      m.ID.String(),
 		created: time.Now(),
 		userID:  m.Author.ID,
-		query:   queries[1],
+		query:   queries[0],
 	}
 	mu.Unlock()
 
