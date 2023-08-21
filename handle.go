@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"regexp"
 	"strings"
 
 	"github.com/DiscordGophers/dr-docso/blog"
@@ -74,37 +75,19 @@ func (b *botState) OnCommand(e *gateway.InteractionCreateEvent) {
 	}
 }
 
+var cmdre = regexp.MustCompile(`\$\[([\w\d/.]+)\]`)
+
 func (b *botState) OnMessage(m *gateway.MessageCreateEvent) {
-	if b.cfg.Prefix == "" {
-		return
-	}
-
-	c := m.Content
-	if !strings.HasPrefix(c, b.cfg.Prefix) {
-		return
-	}
-
 	if _, ok := b.cfg.Blacklist[discord.Snowflake(m.Author.ID)]; ok {
-		log.Printf("Ignoring message from %s", m.Author.Tag())
 		return
 	}
 
-	if m.GuildID != 0 {
-		m.Author = m.Member.User
+	var queries []string
+	for _, v := range cmdre.FindAllStringSubmatch(m.Content, 3) {
+		queries = append(queries, v[1])
 	}
 
-	c = c[len(b.cfg.Prefix):]
-	split := strings.SplitN(c, " ", 2)
-	if len(split) != 2 {
-		return
-	}
-
-	switch split[0] {
-	case "docs":
-		b.handleDocsText(m, split[1])
-	case "help":
-		// todo
-	}
+	b.handleDocsText(m, queries)
 }
 
 func (b *botState) OnMessageEdit(e *gateway.MessageUpdateEvent) {
@@ -121,7 +104,7 @@ func loadCommands(s *state.State, me discord.UserID, cfg configuration) error {
 			if errors.As(err, &httperr) {
 				log.Println(string(httperr.Body))
 			}
-			return fmt.Errorf("Could not register: %s, %w", c.Name, err)
+			return fmt.Errorf("could not register: %s, %w", c.Name, err)
 		}
 		log.Println("Created command:", c.Name)
 	}

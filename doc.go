@@ -41,31 +41,27 @@ var (
 
 func (b *botState) gcInteractionData() {
 	mapTicker := time.NewTicker(time.Minute * 5)
-	for {
-		select {
-		// gc interaction tokens
-		case <-mapTicker.C:
-			now := time.Now()
-			for _, data := range interactionMap {
-				if !now.After(data.created.Add(time.Minute * 5)) {
-					continue
-				}
+	for range mapTicker.C {
+		now := time.Now()
+		for _, data := range interactionMap {
+			if !now.After(data.created.Add(time.Minute * 5)) {
+				continue
+			}
 
-				mu.Lock()
-				delete(interactionMap, data.id)
-				mu.Unlock()
+			mu.Lock()
+			delete(interactionMap, data.id)
+			mu.Unlock()
 
-				if data.token == "" {
-					b.state.EditMessageComplex(data.channelID, data.messageID, api.EditMessageData{
-						Components: &discord.ContainerComponents{},
-					})
-					continue
-				}
-
-				b.state.EditInteractionResponse(b.appID, data.token, api.EditInteractionResponseData{
+			if data.token == "" {
+				b.state.EditMessageComplex(data.channelID, data.messageID, api.EditMessageData{
 					Components: &discord.ContainerComponents{},
 				})
+				continue
 			}
+
+			b.state.EditInteractionResponse(b.appID, data.token, api.EditInteractionResponseData{
+				Components: &discord.ContainerComponents{},
+			})
 		}
 	}
 }
@@ -143,43 +139,50 @@ func (b *botState) handleDocs(e *gateway.InteractionCreateEvent, d *discord.Comm
 	}
 }
 
-func (b *botState) handleDocsText(m *gateway.MessageCreateEvent, query string) {
-	log.Printf("%s used docs(%q) text version", m.Author.Tag(), query)
+func (b *botState) handleDocsText(m *gateway.MessageCreateEvent, queries []string) {
+	log.Printf("%s used docs(%v) text version", m.Author.Tag(), queries)
 
-	var embed discord.Embed
-	var internal, more bool
-	switch query {
-	case "?", "help", "usage":
-		embed, internal = helpEmbed(), true
-	case "alias", "aliases":
-		embed, internal = aliasList(b.cfg.Aliases), true
-	default:
-		embed, more = b.docs(m.Author, query, false)
+	var internal []discord.Embed
+	var embeds []discord.Embed
+	var more []bool
+	for _, query := range queries {
+		switch query {
+		case "?", "help", "usage":
+			internal = append(internal, helpEmbed())
+		case "alias", "aliases":
+			internal = append(internal, aliasList(b.cfg.Aliases))
+		default:
+			embed, m := b.docs(m.Author, query, false)
+			if strings.HasPrefix(embed.Title, "Error") {
+				continue
+			}
+			embeds = append(embeds, embed)
+			more = append(more, m)
+		}
 	}
 
-	if internal {
-		b.state.SendEmbedReply(m.ChannelID, m.ID, embed)
+	if len(internal) > 0 {
+		b.state.SendEmbedReply(m.ChannelID, m.ID, internal...)
 		return
 	}
 
-	if strings.HasPrefix(embed.Title, "Error") {
-		b.state.React(m.ChannelID, m.ID, "😕")
+	if len(embeds) == 0 {
 		return
 	}
 
 	var component discord.InteractiveComponent = selectComponent(m.ID.String(), false)
-	if !more {
+	if len(embeds) == 1 && more[0] {
 		component = buttonComponent(m.ID.String())
 	}
 
 	data, ok := interactionMap[m.ID.String()]
 	if ok {
 		mu.Lock()
-		interactionMap[m.ID.String()].query = query
+		interactionMap[m.ID.String()].query = queries[1]
 		mu.Unlock()
 
 		b.state.EditMessageComplex(m.ChannelID, data.messageID, api.EditMessageData{
-			Embeds: &[]discord.Embed{embed},
+			Embeds: &embeds,
 			Components: &discord.ContainerComponents{
 				&discord.ActionRowComponent{component},
 			},
@@ -192,7 +195,7 @@ func (b *botState) handleDocsText(m *gateway.MessageCreateEvent, query string) {
 		id:      m.ID.String(),
 		created: time.Now(),
 		userID:  m.Author.ID,
-		query:   query,
+		query:   queries[1],
 	}
 	mu.Unlock()
 
@@ -200,7 +203,7 @@ func (b *botState) handleDocsText(m *gateway.MessageCreateEvent, query string) {
 		Components: discord.ContainerComponents{
 			&discord.ActionRowComponent{component},
 		},
-		Embeds: []discord.Embed{embed},
+		Embeds: embeds,
 	})
 	if err != nil {
 		delete(interactionMap, m.ID.String())
@@ -214,7 +217,7 @@ func (b *botState) handleDocsText(m *gateway.MessageCreateEvent, query string) {
 }
 
 func (b *botState) handleDocsComponent(e *gateway.InteractionCreateEvent, data *interactionData) {
-	var embed discord.Embed
+	var embeds []discord.Embed
 	var components *discord.ContainerComponents
 
 	// if e.Member is nil, all operations should be allowed
@@ -252,7 +255,8 @@ func (b *botState) handleDocsComponent(e *gateway.InteractionCreateEvent, data *
 
 	switch action {
 	case "minimize":
-		embed, _ = b.docs(*e.User, data.query, false)
+		embed, _ := b.docs(*e.User, data.query, false)
+		embeds = append(embeds, embed)
 		components = &discord.ContainerComponents{
 			&discord.ActionRowComponent{
 				selectComponent(data.id, false),
@@ -263,7 +267,7 @@ func (b *botState) handleDocsComponent(e *gateway.InteractionCreateEvent, data *
 	// (Only check admin here to reduce total API calls).
 	// If not privileged, send ephemeral instead.
 	case "expand.all":
-		embed, _ = b.docs(*e.User, data.query, true)
+		embed, _ := b.docs(*e.User, data.query, true)
 		components = &discord.ContainerComponents{
 			&discord.ActionRowComponent{
 				selectComponent(data.id, true),
@@ -273,9 +277,10 @@ func (b *botState) handleDocsComponent(e *gateway.InteractionCreateEvent, data *
 		if !hasPerm() {
 			embed = failEmbed("Error", "You do not have the permission to do this.")
 		}
-
+		embeds = append(embeds, embed)
 	case "expand":
-		embed, _ = b.docs(*e.User, data.query, true)
+		embed, _ := b.docs(*e.User, data.query, true)
+		embeds = append(embeds, embed)
 		components = &discord.ContainerComponents{
 			&discord.ActionRowComponent{
 				selectComponent(data.id, true),
@@ -293,37 +298,35 @@ func (b *botState) handleDocsComponent(e *gateway.InteractionCreateEvent, data *
 
 	case "hide":
 		components = &discord.ContainerComponents{}
-		embed, _ = b.docs(*e.User, data.query, false)
-		embed.Description = ""
-
-		if hasPerm() {
-			mu.Lock()
-			delete(interactionMap, data.id)
-			mu.Unlock()
+		for _, embed := range e.Message.Embeds {
+			embed.Description = ""
+			embeds = append(embeds, embed)
 		}
+	default:
+		return
 	}
 
 	if e.GuildID != discord.NullGuildID {
 		// Check admin last.
 		if e.User.ID != data.userID && !hasPerm() {
-			embed = failEmbed("Error", notOwner)
+			embeds = []discord.Embed{failEmbed("Error", notOwner)}
 		}
 	}
 
 	var resp api.InteractionResponse
-	if strings.HasPrefix(embed.Title, "Error") {
+	if strings.HasPrefix(embeds[0].Title, "Error") {
 		resp = api.InteractionResponse{
 			Type: api.MessageInteractionWithSource,
 			Data: &api.InteractionResponseData{
 				Flags:  api.EphemeralResponse,
-				Embeds: &[]discord.Embed{embed},
+				Embeds: &embeds,
 			},
 		}
 	} else {
 		resp = api.InteractionResponse{
 			Type: api.UpdateMessage,
 			Data: &api.InteractionResponseData{
-				Embeds:     &[]discord.Embed{embed},
+				Embeds:     &embeds,
 				Components: components,
 			},
 		}
