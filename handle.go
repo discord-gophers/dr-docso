@@ -82,6 +82,10 @@ func (b *botState) OnMessage(m *gateway.MessageCreateEvent) {
 		return
 	}
 
+	if m.Author.Bot {
+		return
+	}
+
 	var queries []string
 	for _, v := range cmdre.FindAllStringSubmatch(m.Content, 3) {
 		queries = append(queries, v[1])
