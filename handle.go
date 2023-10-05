@@ -75,7 +75,10 @@ func (b *botState) OnCommand(e *gateway.InteractionCreateEvent) {
 	}
 }
 
-var cmdre = regexp.MustCompile(`\$\[([\w\d/.]+)\]`)
+var (
+	cmdre = regexp.MustCompile(`\$\[([\w\d/.]+)\]`)
+	urlre = regexp.MustCompile(`pkg.go.dev/([\w\d/.#]+)`)
+)
 
 func (b *botState) OnMessage(m *gateway.MessageCreateEvent) {
 	if _, ok := b.cfg.Blacklist[discord.Snowflake(m.Author.ID)]; ok {
@@ -89,6 +92,11 @@ func (b *botState) OnMessage(m *gateway.MessageCreateEvent) {
 	var queries []string
 	for _, v := range cmdre.FindAllStringSubmatch(m.Content, 3) {
 		queries = append(queries, v[1])
+	}
+
+	for _, v := range urlre.FindAllStringSubmatch(m.Content, 3) {
+		s := strings.ReplaceAll(v[1], "#", ".")
+		queries = append(queries, s)
 	}
 
 	b.handleDocsText(m, queries)

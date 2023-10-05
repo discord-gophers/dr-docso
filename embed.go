@@ -32,7 +32,7 @@ func typEmbed(pkg doc.Package, typ doc.Type, full bool) (discord.Embed, bool) {
 	return discord.Embed{
 		Title:       fmt.Sprintf("%s: %s", pkg.Name, typ.Name),
 		URL:         fmt.Sprintf("https://pkg.go.dev/%s#%s", pkg.URL, typ.Name),
-		Description: fmt.Sprintf("```go\n%s\n```\n%s", def, c),
+		Description: fmt.Sprintf("```go\n%s```\n%s", def, c),
 		Color:       accentColor,
 	}, dMore || cMore
 }
@@ -43,7 +43,7 @@ func fnEmbed(pkg doc.Package, fn doc.Function, full bool) (discord.Embed, bool) 
 	return discord.Embed{
 		Title:       fmt.Sprintf("%s: %s", pkg.Name, fn.Name),
 		URL:         fmt.Sprintf("https://pkg.go.dev/%s#%s", pkg.URL, fn.Name),
-		Description: fmt.Sprintf("```go\n%s\n```\n%s", def, c),
+		Description: fmt.Sprintf("```go\n%s```\n%s", def, c),
 		Color:       accentColor,
 	}, dMore || cMore
 }
@@ -54,7 +54,7 @@ func methodEmbed(pkg doc.Package, method doc.Method, full bool) (discord.Embed, 
 	return discord.Embed{
 		Title:       fmt.Sprintf("%s: %s.%s", pkg.Name, method.For, method.Name),
 		URL:         fmt.Sprintf("https://pkg.go.dev/%s#%s.%s", pkg.URL, method.For, method.Name),
-		Description: fmt.Sprintf("```go\n%s\n```\n%s", def, c),
+		Description: fmt.Sprintf("```go\n%s```\n%s", def, c),
 		Color:       accentColor,
 	}, dMore || cMore
 }
