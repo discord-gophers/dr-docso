@@ -78,6 +78,7 @@ func (b *botState) OnCommand(e *gateway.InteractionCreateEvent) {
 var (
 	cmdre = regexp.MustCompile(`\$\[([\w\d/.]+)\]`)
 	urlre = regexp.MustCompile(`pkg.go.dev/([\w\d/.#]+)`)
+	escURLre = regexp.MustCompile(`<pkg.go.dev/([\w\d/.#]+)>`)
 )
 
 func (b *botState) OnMessage(m *gateway.MessageCreateEvent) {
@@ -94,6 +95,7 @@ func (b *botState) OnMessage(m *gateway.MessageCreateEvent) {
 		queries = append(queries, v[1])
 	}
 
+	m.Content = escURLre.ReplaceAllString(m.Content, "")
 	for _, v := range urlre.FindAllStringSubmatch(m.Content, 3) {
 		s := strings.ReplaceAll(v[1], "#", ".")
 		queries = append(queries, s)
