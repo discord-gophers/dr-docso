@@ -76,8 +76,8 @@ func (b *botState) OnCommand(e *gateway.InteractionCreateEvent) {
 }
 
 var (
-	cmdre = regexp.MustCompile(`\$\[([\w\d/.]+)\]`)
-	urlre = regexp.MustCompile(`pkg.go.dev/([\w\d/.#]+)`)
+	cmdre    = regexp.MustCompile(`\$\[([\w\d/.]+)\]`)
+	urlre    = regexp.MustCompile(`pkg.go.dev/([\w\d/.#]+)`)
 	escURLre = regexp.MustCompile(`<pkg.go.dev/([\w\d/.#]+)>`)
 )
 
