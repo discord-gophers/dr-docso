@@ -21,7 +21,7 @@ func (b *botState) handleSpec(e *gateway.InteractionCreateEvent, d *discord.Comm
 		b.state.RespondInteraction(e.ID, e.Token, api.InteractionResponse{
 			Type: api.MessageInteractionWithSource,
 			Data: &api.InteractionResponseData{
-				Flags:  api.EphemeralResponse,
+				Flags:  discord.EphemeralMessage,
 				Embeds: &[]discord.Embed{embed},
 			},
 		})
@@ -55,7 +55,7 @@ func (b *botState) handleSpec(e *gateway.InteractionCreateEvent, d *discord.Comm
 		b.state.RespondInteraction(e.ID, e.Token, api.InteractionResponse{
 			Type: api.MessageInteractionWithSource,
 			Data: &api.InteractionResponseData{
-				Flags: api.EphemeralResponse,
+				Flags: discord.EphemeralMessage,
 				Embeds: &[]discord.Embed{failEmbed(
 					"Error",
 					fmt.Sprintf("An exact match was not found for %q.\n\nTry `/spec query:toc`.\n%s", query, results),
@@ -88,7 +88,7 @@ func (b *botState) handleSpec(e *gateway.InteractionCreateEvent, d *discord.Comm
 func (b *botState) handleSpecComponent(e *gateway.InteractionCreateEvent, data discord.ComponentInteraction, cmd string) {
 	switch cmd {
 	case "toc":
-		opt := data.(*discord.SelectInteraction).Values[0]
+		opt := data.(*discord.StringSelectInteraction).Values[0]
 
 		if opt == "back" {
 			b.state.RespondInteraction(e.ID, e.Token, api.InteractionResponse{
@@ -109,7 +109,7 @@ func (b *botState) handleSpecComponent(e *gateway.InteractionCreateEvent, data d
 		err := b.state.RespondInteraction(e.ID, e.Token, api.InteractionResponse{
 			Type: api.UpdateMessage,
 			Data: &api.InteractionResponseData{
-				Flags: api.EphemeralResponse,
+				Flags: discord.EphemeralMessage,
 				Embeds: &[]discord.Embed{
 					{
 						Title:       "Spec - " + opt,
@@ -119,7 +119,7 @@ func (b *botState) handleSpecComponent(e *gateway.InteractionCreateEvent, data d
 				},
 				Components: &discord.ContainerComponents{
 					&discord.ActionRowComponent{
-						&discord.SelectComponent{
+						&discord.StringSelectComponent{
 							CustomID:    "spec.toc",
 							Placeholder: "View Subheadings",
 							Options:     options,

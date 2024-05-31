@@ -10,6 +10,12 @@ import (
 func packageOptions(parts []string, pkg doc.Package) fuzzy.Ranks {
 	var opts []string
 
+	for _, c := range pkg.Constants {
+		opts = append(opts, c.Name)
+	}
+	for _, v := range pkg.Variables {
+		opts = append(opts, v.Name)
+	}
 	for _, f := range pkg.Functions {
 		opts = append(opts, f.Name)
 	}
@@ -117,7 +123,8 @@ var stdlibAliases = map[string]string{
 	"x509":     "crypto/x509",
 	"pkix":     "crypto/x509/pkix",
 
-	"sql": "database/sql",
+	"db/sql": "database/sql",
+	"sql":    "database/sql",
 
 	"dwarf":    "debug/dwarf",
 	"elf":      "debug/elf",
@@ -245,6 +252,7 @@ var stdlib = map[string]bool{
 	"cmd/test2json":        true,
 	"cmd/trace":            true,
 	"cmd/vet":              true,
+	"cmp":                  true,
 	"compress":             true,
 	"compress/bzip2":       true,
 	"compress/flate":       true,
@@ -337,12 +345,14 @@ var stdlib = map[string]bool{
 	"io/fs":                true,
 	"io/ioutil":            true,
 	"log":                  true,
+	"log/slog":             true,
 	"log/syslog":           true,
 	"math":                 true,
 	"math/big":             true,
 	"math/bits":            true,
 	"math/cmplx":           true,
 	"math/rand":            true,
+	"math/rand/v2":         true,
 	"mime":                 true,
 	"mime/multipart":       true,
 	"mime/quotedprintable": true,
@@ -379,6 +389,7 @@ var stdlib = map[string]bool{
 	"runtime/pprof":        true,
 	"runtime/race":         true,
 	"runtime/trace":        true,
+	"slices":               true,
 	"sort":                 true,
 	"strconv":              true,
 	"strings":              true,

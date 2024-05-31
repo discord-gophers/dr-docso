@@ -4,15 +4,16 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"net/http"
 	"os"
 
 	"github.com/diamondburned/arikawa/v3/discord"
 	"github.com/diamondburned/arikawa/v3/gateway"
 	"github.com/diamondburned/arikawa/v3/state"
 	"github.com/hhhapz/doc"
-	"github.com/hhhapz/doc/godocs"
+	"github.com/hhhapz/doc/pkgsite"
 )
+
+const userAgent = "https://github.com/DiscordGophers/dr-docso (Discord Server for Go)"
 
 func run() error {
 	cfg := config()
@@ -20,15 +21,11 @@ func run() error {
 		return fmt.Errorf("no token provided")
 	}
 
-	s, err := state.New("Bot " + cfg.Token)
-	if err != nil {
-		return fmt.Errorf("could not open session: %w", err)
-	}
-
-	searcher := doc.New(http.DefaultClient, godocs.Parser, doc.UserAgent("https://github.com/DiscordGophers/dr-docso (Discord Server for Go)"))
+	s := state.New("Bot " + cfg.Token)
+	searcher := doc.NewCachedSearcher(pkgsite.Parser, doc.UserAgent(userAgent))
 	b := botState{
 		cfg:      cfg,
-		searcher: doc.WithCache(searcher),
+		searcher: searcher,
 		state:    s,
 	}
 
@@ -50,7 +47,7 @@ func run() error {
 	}
 	b.appID = discord.AppID(me.ID)
 
-	if err := loadCommands(s, me.ID, cfg); err != nil {
+	if err := loadCommands(s, me.ID); err != nil {
 		return fmt.Errorf("could not init commands: %w", err)
 	}
 

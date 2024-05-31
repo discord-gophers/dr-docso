@@ -19,7 +19,7 @@ import (
 type botState struct {
 	cfg      configuration
 	appID    discord.AppID
-	searcher *doc.CachedSearcher
+	searcher doc.CachedSearcher
 	state    *state.State
 
 	articles []blog.Article
@@ -107,20 +107,16 @@ func (b *botState) OnMessageEdit(e *gateway.MessageUpdateEvent) {
 	b.state.Unreact(e.ChannelID, e.ID, "😕")
 }
 
-func loadCommands(s *state.State, me discord.UserID, cfg configuration) error {
+func loadCommands(s *state.State, me discord.UserID) error {
 	appID := discord.AppID(me)
-
-	for _, c := range commands {
-		if _, err := s.CreateCommand(appID, c); err != nil {
-			var httperr *httputil.HTTPError
-			if errors.As(err, &httperr) {
-				log.Println(string(httperr.Body))
-			}
-			return fmt.Errorf("could not register: %s, %w", c.Name, err)
+	if _, err := s.BulkOverwriteCommands(appID, commands); err != nil {
+		var httperr *httputil.HTTPError
+		if errors.As(err, &httperr) {
+			log.Println(string(httperr.Body))
 		}
-		log.Println("Created command:", c.Name)
-	}
+		return fmt.Errorf("could not bulk update commands: %w", err)
 
+	}
 	return nil
 }
 

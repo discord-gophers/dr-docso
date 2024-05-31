@@ -9,8 +9,8 @@ import (
 func typdef(def string, full bool) (string, bool) {
 	split := strings.Split(def, "\n")
 
-	// Show upto 4 lines, good for single-line interfaces and the sort.
-	if len(split) < 6 {
+	// Show upto 8 lines, good for single-line interfaces and the sort.
+	if len(split) <= 8 {
 		return def, false
 	}
 
@@ -42,22 +42,27 @@ func comment(c doc.Comment, initial int, full bool) (string, bool) {
 		return "*No documentation found*", false
 	}
 
+	limit := docLimit
 	if !full {
-		if md := c.Markdown(); len(md) < 500 {
-			return md, false
-		}
-
-		md, more := c[0].Markdown(), len(c) > 1
-		if len(md) > 600 {
-			md = md[:500]
-			more = true
-		}
-		if more {
-			md += "...\n\n*More documentation omitted*"
-		}
-
-		return md, more
+		limit = shortDocLimit
 	}
+
+	// if !full {
+	// 	if md := c.Markdown(); len(md) < 500 {
+	// 		return md, false
+	// 	}
+
+	// 	md, more := c[0].Markdown(), len(c) > 1
+	// 	if len(md) > 600 {
+	// 		md = md[:500]
+	// 		more = true
+	// 	}
+	// 	if more {
+	// 		md += "...\n\n*More documentation omitted*"
+	// 	}
+
+	// 	return md, more
+	// }
 
 	var parts doc.Comment
 	var more bool
@@ -65,7 +70,7 @@ func comment(c doc.Comment, initial int, full bool) (string, bool) {
 	length := initial
 	for _, note := range c {
 		l := len(note.Text())
-		if l+length > docLimit {
+		if l+length > limit {
 			parts = append(parts, doc.Paragraph("*More documentation omitted...*"))
 			more = true
 			break

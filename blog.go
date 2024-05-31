@@ -50,7 +50,7 @@ func (b *botState) handleBlog(e *gateway.InteractionCreateEvent, d *discord.Comm
 		b.state.RespondInteraction(e.ID, e.Token, api.InteractionResponse{
 			Type: api.MessageInteractionWithSource,
 			Data: &api.InteractionResponseData{
-				Flags:  api.EphemeralResponse,
+				Flags:  discord.EphemeralMessage,
 				Embeds: &[]discord.Embed{embed},
 			},
 		})
@@ -66,7 +66,7 @@ func (b *botState) handleBlog(e *gateway.InteractionCreateEvent, d *discord.Comm
 		b.state.RespondInteraction(e.ID, e.Token, api.InteractionResponse{
 			Type: api.MessageInteractionWithSource,
 			Data: &api.InteractionResponseData{
-				Flags:  api.EphemeralResponse,
+				Flags:  discord.EphemeralMessage,
 				Embeds: &[]discord.Embed{failEmbed("Error", fmt.Sprintf("No results found for %q", query))},
 			},
 		})
@@ -105,7 +105,7 @@ func (b *botState) handleBlog(e *gateway.InteractionCreateEvent, d *discord.Comm
 	}
 
 	comps[0] = &discord.ActionRowComponent{
-		&discord.SelectComponent{
+		&discord.StringSelectComponent{
 			CustomID:    "blog.display",
 			Options:     opts,
 			Placeholder: "Display Blog Post",
@@ -116,7 +116,7 @@ func (b *botState) handleBlog(e *gateway.InteractionCreateEvent, d *discord.Comm
 	b.state.RespondInteraction(e.ID, e.Token, api.InteractionResponse{
 		Type: api.MessageInteractionWithSource,
 		Data: &api.InteractionResponseData{
-			Flags: api.EphemeralResponse,
+			Flags: discord.EphemeralMessage,
 			Embeds: &[]discord.Embed{
 				{
 					Title: fmt.Sprintf("Blog: %d Results", total),
@@ -140,7 +140,7 @@ func (b *botState) handleBlog(e *gateway.InteractionCreateEvent, d *discord.Comm
 func (b *botState) handleBlogComponent(e *gateway.InteractionCreateEvent, data discord.ComponentInteraction, cmd string) {
 	switch cmd {
 	case "display":
-		b.BlogDisplay(e, data.(*discord.SelectInteraction).Values[0])
+		b.BlogDisplay(e, data.(*discord.StringSelectInteraction).Values[0])
 		return
 	}
 
@@ -180,7 +180,7 @@ func (b *botState) handleBlogComponent(e *gateway.InteractionCreateEvent, data d
 	}
 
 	comps := discord.Components(
-		&discord.SelectComponent{
+		&discord.StringSelectComponent{
 			CustomID:    "blog.display",
 			Options:     opts,
 			Placeholder: "Display Blog Post",
@@ -191,7 +191,7 @@ func (b *botState) handleBlogComponent(e *gateway.InteractionCreateEvent, data d
 	b.state.RespondInteraction(e.ID, e.Token, api.InteractionResponse{
 		Type: api.UpdateMessage,
 		Data: &api.InteractionResponseData{
-			Flags: api.EphemeralResponse,
+			Flags: discord.EphemeralMessage,
 			Embeds: &[]discord.Embed{
 				{
 					Title: fmt.Sprintf("Blog: %d Results", total),
@@ -233,7 +233,7 @@ func (b *botState) BlogDisplay(e *gateway.InteractionCreateEvent, url string) {
 			Components: &discord.ContainerComponents{},
 		},
 	})
-	b.state.CreateInteractionFollowup(e.AppID, e.Token, api.InteractionResponseData{
+	b.state.FollowUpInteraction(e.AppID, e.Token, api.InteractionResponseData{
 		Content:         option.NewNullableString(e.User.Mention() + ":"),
 		Embeds:          &[]discord.Embed{article.Display()},
 		AllowedMentions: &api.AllowedMentions{},

@@ -251,7 +251,7 @@ func init() {
 		}
 	}
 	TOC = &api.InteractionResponseData{
-		Flags: api.EphemeralResponse,
+		Flags: discord.EphemeralMessage,
 		Embeds: &[]discord.Embed{{
 			Title: "Spec - Table of Contents",
 			Description: `Use the component below to select a subheading.
@@ -265,7 +265,7 @@ Search for a full heading to view full heading contents.
 			Color: 0x00ADD8,
 		}},
 		Components: discord.ComponentsPtr(
-			&discord.SelectComponent{
+			&discord.StringSelectComponent{
 				CustomID:    "spec.toc",
 				Placeholder: "View Headings",
 				Options:     tocOptions,
@@ -288,7 +288,7 @@ func NodesSelect(nodes []*Node) *discord.ContainerComponents {
 	}
 
 	return discord.ComponentsPtr(
-		&discord.SelectComponent{
+		&discord.StringSelectComponent{
 			Placeholder: "Select",
 			CustomID:    "spec.toc",
 			Options:     options,

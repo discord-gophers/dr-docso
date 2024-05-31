@@ -9,8 +9,9 @@ import (
 )
 
 const (
-	docLimit = 2800
-	defLimit = 1000
+	docLimit      = 2800
+	shortDocLimit = 1200
+	defLimit      = 1000
 
 	accentColor = 0x00ADD8
 )
@@ -43,6 +44,17 @@ func fnEmbed(pkg doc.Package, fn doc.Function, full bool) (discord.Embed, bool) 
 	return discord.Embed{
 		Title:       fmt.Sprintf("%s: %s", pkg.Name, fn.Name),
 		URL:         fmt.Sprintf("https://pkg.go.dev/%s#%s", pkg.URL, fn.Name),
+		Description: fmt.Sprintf("```go\n%s```\n%s", def, c),
+		Color:       accentColor,
+	}, dMore || cMore
+}
+
+func varEmbed(pkg doc.Package, v doc.Variable, full bool) (discord.Embed, bool) {
+	def, dMore := typdef(v.Signature, full)
+	c, cMore := comment(v.Comment, len(def), full)
+	return discord.Embed{
+		Title:       fmt.Sprintf("%s: %s", pkg.Name, v.Name),
+		URL:         fmt.Sprintf("https://pkg.go.dev/%s#%s", pkg.URL, v.Name),
 		Description: fmt.Sprintf("```go\n%s```\n%s", def, c),
 		Color:       accentColor,
 	}, dMore || cMore

@@ -103,8 +103,8 @@ func (b *botState) handleDocs(e *gateway.InteractionCreateEvent, d *discord.Comm
 		}
 
 		// Discord's API means this will always error out, but its still valid.
-		_, _ = b.state.CreateInteractionFollowup(e.AppID, e.Token, api.InteractionResponseData{
-			Flags:  api.EphemeralResponse,
+		_, _ = b.state.FollowUpInteraction(e.AppID, e.Token, api.InteractionResponseData{
+			Flags:  discord.EphemeralMessage,
 			Embeds: &[]discord.Embed{embed},
 		})
 		return
@@ -247,7 +247,7 @@ func (b *botState) handleDocsComponent(e *gateway.InteractionCreateEvent, data *
 	}
 
 	action := "hide"
-	if selects, ok := e.Data.(*discord.SelectInteraction); ok && len(selects.Values) > 0 {
+	if selects, ok := e.Data.(*discord.StringSelectInteraction); ok && len(selects.Values) > 0 {
 		action = selects.Values[0]
 	}
 
@@ -290,7 +290,7 @@ func (b *botState) handleDocsComponent(e *gateway.InteractionCreateEvent, data *
 		_ = b.state.RespondInteraction(e.ID, e.Token, api.InteractionResponse{
 			Type: api.MessageInteractionWithSource,
 			Data: &api.InteractionResponseData{
-				Flags:  api.EphemeralResponse,
+				Flags:  discord.EphemeralMessage,
 				Embeds: &[]discord.Embed{embed},
 			},
 		})
@@ -318,7 +318,7 @@ func (b *botState) handleDocsComponent(e *gateway.InteractionCreateEvent, data *
 		resp = api.InteractionResponse{
 			Type: api.MessageInteractionWithSource,
 			Data: &api.InteractionResponseData{
-				Flags:  api.EphemeralResponse,
+				Flags:  discord.EphemeralMessage,
 				Embeds: &embeds,
 			},
 		}
@@ -337,16 +337,20 @@ func (b *botState) handleDocsComponent(e *gateway.InteractionCreateEvent, data *
 func (b *botState) handleDocsComplete(e *gateway.InteractionCreateEvent, d *discord.AutocompleteInteraction) {
 	values := map[string]string{}
 	var focused string
+	fmt.Printf("%#v\n", d.Options)
 	for _, opt := range d.Options {
-		values[opt.Name] = opt.Value
+		var str string
+		opt.Value.UnmarshalTo(&str)
+		values[opt.Name] = str
 		if opt.Focused {
 			focused = opt.Name
 		}
 	}
+	fmt.Println(values)
 
-	opts := []api.AutocompleteChoice{}
+	opts := api.AutocompleteStringChoices{}
 	add := func(name, value string) {
-		opts = append(opts, api.AutocompleteChoice{
+		opts = append(opts, discord.StringChoice{
 			Name:  name,
 			Value: value,
 		})
@@ -484,6 +488,12 @@ func (b *botState) docs(user discord.User, query string, full bool) (discord.Emb
 		if fn, ok := pkg.Functions[parts[0]]; ok {
 			return fnEmbed(pkg, fn, full)
 		}
+		if cnst, ok := pkg.ConstantMap[parts[0]]; ok {
+			return varEmbed(pkg, cnst, full)
+		}
+		if vvar, ok := pkg.VariableMap[parts[0]]; ok {
+			return varEmbed(pkg, vvar, full)
+		}
 		return failEmbed("Error: Not Found", fmt.Sprintf(notFound, parts[0], module)), false
 
 	default:
@@ -501,7 +511,7 @@ func (b *botState) docs(user discord.User, query string, full bool) (discord.Emb
 	}
 }
 
-func selectComponent(id string, full bool) *discord.SelectComponent {
+func selectComponent(id string, full bool) *discord.StringSelectComponent {
 	expand := discord.SelectOption{
 		Label:       "Expand",
 		Value:       "expand",
@@ -517,7 +527,7 @@ func selectComponent(id string, full bool) *discord.SelectComponent {
 		}
 	}
 
-	sel := &discord.SelectComponent{
+	sel := &discord.StringSelectComponent{
 		CustomID:    discord.ComponentID(id),
 		Placeholder: "Actions",
 		Options: []discord.SelectOption{
