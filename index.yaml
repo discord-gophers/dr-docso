@@ -2,6 +2,16 @@ apiVersion: v1
 entries:
   dr-docso:
   - apiVersion: v2
+    appVersion: v1.1.1
+    created: "2024-06-27T19:57:38.389348433Z"
+    description: A Helm chart for dr-docso
+    digest: e437c40db89d455e5f91c6f6f3f2103232a791999d1523372c9471286d498209
+    name: dr-docso
+    type: application
+    urls:
+    - https://github.com/discord-gophers/dr-docso/releases/download/dr-docso-1.1.1/dr-docso-1.1.1.tgz
+    version: 1.1.1
+  - apiVersion: v2
     appVersion: v1.1.0
     created: "2024-06-27T18:42:42.532738136Z"
     description: A Helm chart for dr-docso
@@ -91,4 +101,4 @@ entries:
     urls:
     - https://github.com/discord-gophers/dr-docso/releases/download/dr-docso-0.1.1/dr-docso-0.1.1.tgz
     version: 0.1.1
-generated: "2024-06-27T18:42:42.532812715Z"
+generated: "2024-06-27T19:57:38.389402805Z"
