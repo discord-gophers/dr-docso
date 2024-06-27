@@ -76,8 +76,9 @@ func (b *botState) OnCommand(e *gateway.InteractionCreateEvent) {
 }
 
 var (
-	cmdre = regexp.MustCompile(`\$\[([\w\d/.]+)\]`)
-	urlre = regexp.MustCompile(`pkg.go.dev/([\w\d/.#]+)`)
+	cmdre    = regexp.MustCompile(`\$\[([\w\d/.]+)\]`)
+	urlre    = regexp.MustCompile(`^(https?://)?pkg.go.dev/([\w\d/.#]+)$`)
+	escURLre = regexp.MustCompile(`<(https?://)?pkg.go.dev/([\w\d/.#]+)>`)
 )
 
 func (b *botState) OnMessage(m *gateway.MessageCreateEvent) {
@@ -89,14 +90,15 @@ func (b *botState) OnMessage(m *gateway.MessageCreateEvent) {
 		return
 	}
 
-	var queries []string
+	var queries []textQuery
 	for _, v := range cmdre.FindAllStringSubmatch(m.Content, 3) {
-		queries = append(queries, v[1])
+		queries = append(queries, textQuery{v[1], "cmdre"})
 	}
 
+	m.Content = escURLre.ReplaceAllString(m.Content, "")
 	for _, v := range urlre.FindAllStringSubmatch(m.Content, 3) {
-		s := strings.ReplaceAll(v[1], "#", ".")
-		queries = append(queries, s)
+		s := strings.ReplaceAll(v[2], "#", ".")
+		queries = append(queries, textQuery{s, "urlre"})
 	}
 
 	b.handleDocsText(m, queries)

@@ -146,21 +146,31 @@ func (b *botState) handleDocs(e *gateway.InteractionCreateEvent, d *discord.Comm
 	}
 }
 
-func (b *botState) handleDocsText(m *gateway.MessageCreateEvent, queries []string) {
-	log.Printf("%s used docs(%v) text version", m.Author.Tag(), queries)
+type textQuery struct {
+	query  string
+	source string
+}
+
+func (b *botState) handleDocsText(m *gateway.MessageCreateEvent, queries []textQuery) {
+	if len(queries) > 0 {
+		log.Printf("%s used docs(%v) text version", m.Author.Tag(), queries)
+	}
 
 	var internal []discord.Embed
 	var embeds []discord.Embed
 	var more []bool
-	for _, query := range queries {
-		switch query {
+	for _, q := range queries {
+		switch q.query {
 		case "?", "help", "usage":
 			internal = append(internal, helpEmbed())
 		case "alias", "aliases":
 			internal = append(internal, aliasList(b.cfg.Aliases))
 		default:
-			embed, m := b.docs(m.Author, query, false)
+			embed, m := b.docs(m.Author, q.query, false)
 			if strings.HasPrefix(embed.Title, "Error") {
+				continue
+			}
+			if strings.HasPrefix(embed.Title, "Package") && q.source == "urlre" {
 				continue
 			}
 			embeds = append(embeds, embed)
@@ -185,7 +195,7 @@ func (b *botState) handleDocsText(m *gateway.MessageCreateEvent, queries []strin
 	data, ok := interactionMap[m.ID.String()]
 	if ok {
 		mu.Lock()
-		interactionMap[m.ID.String()].query = queries[0]
+		interactionMap[m.ID.String()].query = queries[0].query
 		mu.Unlock()
 
 		b.state.EditMessageComplex(m.ChannelID, data.messageID, api.EditMessageData{
@@ -202,7 +212,7 @@ func (b *botState) handleDocsText(m *gateway.MessageCreateEvent, queries []strin
 		id:      m.ID.String(),
 		created: time.Now(),
 		userID:  m.Author.ID,
-		query:   queries[0],
+		query:   queries[0].query,
 	}
 	mu.Unlock()
 
