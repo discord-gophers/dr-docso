@@ -68,7 +68,17 @@ func comment(c doc.Comment, initial int, full bool) (string, bool) {
 	var more bool
 
 	length := initial
-	for _, note := range c {
+	for i, note := range c {
+		if _, ok := note.(doc.Pre); !full && ok {
+			parts = append(parts, doc.Paragraph("*More documentation omitted...*"))
+			more = true
+			break
+		}
+		if i > 3 && !full {
+			parts = append(parts, doc.Paragraph("*More documentation omitted...*"))
+			more = true
+			break
+		}
 		l := len(note.Text())
 		if l+length > limit {
 			parts = append(parts, doc.Paragraph("*More documentation omitted...*"))

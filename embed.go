@@ -9,8 +9,8 @@ import (
 )
 
 const (
-	docLimit      = 2800
-	shortDocLimit = 1200
+	docLimit      = 1000
+	shortDocLimit = 600
 	defLimit      = 1000
 
 	accentColor = 0x00ADD8

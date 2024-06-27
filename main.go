@@ -22,7 +22,7 @@ func run() error {
 	}
 
 	s := state.New("Bot " + cfg.Token)
-	searcher := doc.NewCachedSearcher(pkgsite.Parser, doc.UserAgent(userAgent))
+	searcher := doc.NewCachedSearcher(pkgsite.Parser, doc.UserAgent(userAgent), doc.WithDuplicateTypeFuncs())
 	b := botState{
 		cfg:      cfg,
 		searcher: searcher,

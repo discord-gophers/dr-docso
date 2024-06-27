@@ -14,6 +14,10 @@ github.com/gorilla/websocket v1.5.1 h1:gmztn0JnHVt9JZquRuzLw3g4wouNVzKL15iLr/zn/
 github.com/gorilla/websocket v1.5.1/go.mod h1:x3kM2JMyaluk02fnUJpQuwD2dCS5NDG2ZHL0uE0tcaY=
 github.com/hhhapz/doc v1.1.1 h1:vq9HsCPm5RzApu1qho/zjqZIecL8xn+wLSIZL4febxM=
 github.com/hhhapz/doc v1.1.1/go.mod h1:bV2icLacUDwxxA2ejdRT5TDD46sWglLHztMagkfVFEM=
+github.com/hhhapz/doc v1.2.0 h1:6QeB305GHKf2LfIQYxjGXn0XSAUnEggfSimdonoYqmM=
+github.com/hhhapz/doc v1.2.0/go.mod h1:bV2icLacUDwxxA2ejdRT5TDD46sWglLHztMagkfVFEM=
+github.com/hhhapz/doc v1.2.1 h1:rlUme9LrK9nGFAmmSr7zUD7m+2NMBdB+ftpubedR8mE=
+github.com/hhhapz/doc v1.2.1/go.mod h1:bV2icLacUDwxxA2ejdRT5TDD46sWglLHztMagkfVFEM=
 github.com/lithammer/fuzzysearch v1.1.8 h1:/HIuJnjHuXS8bKaiTMeeDlW2/AyIWk2brx1V8LFgLN4=
 github.com/lithammer/fuzzysearch v1.1.8/go.mod h1:IdqeyBClc3FFqSzYq/MXESsS4S0FsZ5ajtkr5xPLts4=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=

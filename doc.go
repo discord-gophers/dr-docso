@@ -63,6 +63,13 @@ func (b *botState) gcInteractionData() {
 				Components: &discord.ContainerComponents{},
 			})
 		}
+		b.searcher.WithCache(func(cache map[string]*doc.CachedPackage) {
+			for k, cp := range cache {
+				if time.Since(cp.Created) > time.Hour*72 { // removed stuff not used in over 72 hours
+					delete(cache, k)
+				}
+			}
+		})
 	}
 }
 
@@ -337,7 +344,6 @@ func (b *botState) handleDocsComponent(e *gateway.InteractionCreateEvent, data *
 func (b *botState) handleDocsComplete(e *gateway.InteractionCreateEvent, d *discord.AutocompleteInteraction) {
 	values := map[string]string{}
 	var focused string
-	fmt.Printf("%#v\n", d.Options)
 	for _, opt := range d.Options {
 		var str string
 		opt.Value.UnmarshalTo(&str)
@@ -346,7 +352,6 @@ func (b *botState) handleDocsComplete(e *gateway.InteractionCreateEvent, d *disc
 			focused = opt.Name
 		}
 	}
-	fmt.Println(values)
 
 	opts := api.AutocompleteStringChoices{}
 	add := func(name, value string) {

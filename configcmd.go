@@ -95,7 +95,7 @@ block:
 			var items []string
 			b.searcher.WithCache(func(cache map[string]*doc.CachedPackage) {
 				for k, cp := range cache {
-					if time.Since(cp.Updated) > time.Hour*24 { // removed stuff not used in over 24 hours
+					if time.Since(cp.Created) > time.Hour*24 { // removed stuff not used in over 24 hours
 						delete(cache, k)
 						items = append(items, "- "+k)
 					}

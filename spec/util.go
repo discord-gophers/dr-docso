@@ -129,13 +129,13 @@ func (h Heading) Markdown() string {
 	var text string
 	switch h.Level {
 	case 2:
-		text = "__**" + h.Text + "**__"
+		text = "## " + h.Text
 	case 3:
-		text = "__" + h.Text + "__"
+		text = "### " + h.Text
 	case 4:
-		text = h.Text
+		text = "**" + h.Text + "**"
 	}
-	return fmt.Sprintf("> [%s](%s#%s)\n", text, page, strings.ReplaceAll(h.Text, " ", "_"))
+	return text
 }
 
 func (p Paragraph) Markdown() string {
