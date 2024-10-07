@@ -40,7 +40,6 @@ func TestConfigFromBytes(t *testing.T) {
 	input := []byte(`
 {
 	"prefix": "dr.",
-	"token": "--",
 	"permissions": {
 		"docs": [
 			"1337"
@@ -59,7 +58,6 @@ func TestConfigFromBytes(t *testing.T) {
 
 	expected := configuration{
 		Prefix: "dr.",
-		Token:  "--",
 		Permissions: commandPermissions{
 			Docs: map[discord.Snowflake]struct{}{
 				1337: {},

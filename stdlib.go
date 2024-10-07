@@ -347,6 +347,7 @@ var stdlib = map[string]bool{
 	"log":                  true,
 	"log/slog":             true,
 	"log/syslog":           true,
+	"maps":                 true,
 	"math":                 true,
 	"math/big":             true,
 	"math/bits":            true,

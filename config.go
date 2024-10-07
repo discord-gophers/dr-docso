@@ -12,7 +12,7 @@ import (
 
 type configuration struct {
 	Prefix      string             `json:"prefix"`
-	Token       string             `json:"token"`
+	Token       string             `json:"-"`
 	Permissions commandPermissions `json:"permissions"`
 
 	Aliases map[string]string `json:"aliases"`
@@ -69,12 +69,7 @@ func config() configuration {
 		log.Fatalf("could not parse config, %s", err)
 	}
 
-	if config.Aliases == nil {
-		config.Aliases = map[string]string{}
-	}
-	if config.Blacklist == nil {
-		config.Blacklist = map[discord.Snowflake]struct{}{}
-	}
+	config.Token = os.Getenv("BOT_TOKEN")
 
 	return config
 }
