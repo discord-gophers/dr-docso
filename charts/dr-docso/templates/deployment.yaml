@@ -30,7 +30,7 @@ spec:
           - cp
           - -n
           - /config/config.json 
-          - /data/config.json"
+          - /data/config.json
         volumeMounts:
           - name: data
             mountPath: /data
