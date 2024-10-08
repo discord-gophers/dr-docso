@@ -24,21 +24,47 @@ spec:
       {{- end }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      initContainers:
+      - name: init-config
+        image: "busybox:1.37"
+        command:
+          - cp
+          - -n
+          - /config/config.json 
+          - /data/config.json"
+        volumeMounts:
+          - name: data
+            mountPath: /data
+          - name: config
+            mountPath: /config
       containers:
-        - name: {{ .Chart.Name }}
-          securityContext:
-            {{- toYaml .Values.securityContext | nindent 12 }}
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
-          resources:
-            {{- toYaml .Values.resources | nindent 12 }}
-          volumeMounts:
-          - name: config-volume
+      - name: {{ .Chart.Name }}
+        securityContext:
+          {{- toYaml .Values.securityContext | nindent 12 }}
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        resources:
+          {{- toYaml .Values.resources | nindent 12 }}
+        volumeMounts:
+          - name: data
             mountPath: /docso
+        env:
+          - name: BOT_TOKEN
+            valueFrom:
+              secretKeyRef:
+              {{- if .Values.existingSecret }}
+                name: "{{ .Values.existingSecret }}"
+              {{- else }}
+                name: {{ include "dr-docso.fullname" . }}
+              {{- end }}
+                key: token
       volumes:
-        - name: config-volume
+        - name: config
           configMap:
             name: {{ include "dr-docso.fullname" . }}-configmap
+        - name: "data"
+          persistentVolumeClaim:
+            claimName: "dr-docso"
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

@@ -10,7 +10,11 @@ image:
   # Overrides the image tag whose default is the chart appVersion.
   tag: ""
 
+existingSecret: ""
 botToken: ""
+
+storage:
+  storageClassName: ""
 
 # persmission json for expanding the docs for all users and changing the config
 permissions: {}
