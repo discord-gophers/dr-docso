@@ -6,7 +6,6 @@ data:
   config.json: |
     {
         "prefix": "d.",
-        "token": "{{ .Values.botToken | required "botToken is required" }}",
         "permissions": {{ .Values.permissions | toJson }},
         "aliases": {
                 "arikawa": "github.com/diamondburned/arikawa/v3",
