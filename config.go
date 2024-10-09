@@ -92,7 +92,7 @@ func configFromBytes(data []byte) (configuration, error) {
 }
 
 func saveConfig(config configuration) error {
-	f, err := os.OpenFile("config.json", os.O_WRONLY, 0o644)
+	f, err := os.OpenFile("config.json", os.O_WRONLY|os.O_TRUNC, 0o644)
 	if err != nil {
 		return err
 	}
